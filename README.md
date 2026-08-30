@@ -14,19 +14,23 @@ Current focus: **replacing remote stock photography with the owner's own photos*
 image at a time (each supplied as a clearly-named file on the Desktop, verified byte-for-byte
 by MD5 hash before install — the tooling cannot view images).
 
-**Most recent work (v2.12.0):** the old “M1” tab favicon was replaced by a PNG set
-generated from the owner’s square logo (`img/logo.jpg` → `favicon-16/32/48/192/512.png`
-+ `apple-touch-icon.png`); `favicon.svg` deleted. Before that (v2.11.0): the admin views
-(`admin.html` and `electron/admin.html`) are protected by a password lock (SHA-256 hash
-in `js/config.js`, per-tab session, manual **Lock** button) — E2E-tested under Electron.
-Before that (v2.10.0): EmailJS configured with the owner’s real credentials and
-**end-to-end delivery verified** (HTTP 200 → inbox); the account’s strict mode was
-disabled so the browser SDK can send, and the authorized-domains restriction should be
-used instead. Before that (v2.9.0): Phase 1 cleanup — all remaining “Mar-1 Travel” text
-(including Arabic “مار-1 ترافل” and the Electron app) replaced with BLACK TRANSSIMO,
-the `bookLabel` “Book”-button bug (`data-book="undefined"`) fixed, vehicle pre-selection
-repaired (Prado 4x4, Classe E), booking validation hardened (passengers 1–15, return
-date ≥ departure), and Electron statuses aligned (`declined` → `cancelled`).
+**Most recent work (v2.13.0):** a ready-to-paste EmailJS email template model
+(`emailjs-template.html`) was created, adapted one-to-one to the booking form — subject
+`{{subject}}`, destination `{{to_email}}`, reply-to `{{reply_to}}`, and a styled body
+covering Customer / Journey / Schedule / Booking / Message. Before that (v2.12.0): the old
+“M1” tab favicon was replaced by a PNG set generated from the owner’s square logo
+(`img/logo.jpg` → `favicon-16/32/48/192/512.png` + `apple-touch-icon.png`); `favicon.svg`
+deleted. Before that (v2.11.0): the admin views (`admin.html` and `electron/admin.html`)
+are protected by a password lock (SHA-256 hash in `js/config.js`, per-tab session, manual
+**Lock** button) — E2E-tested under Electron. Before that (v2.10.0): EmailJS configured
+with the owner’s real credentials and **end-to-end delivery verified** (HTTP 200 → inbox);
+the account’s strict mode was disabled so the browser SDK can send, and the
+authorized-domains restriction should be used instead. Before that (v2.9.0): Phase 1
+cleanup — all remaining “Mar-1 Travel” text (including Arabic “مار-1 ترافل” and the
+Electron app) replaced with BLACK TRANSSIMO, the `bookLabel` “Book”-button bug
+(`data-book="undefined"`) fixed, vehicle pre-selection repaired (Prado 4x4, Classe E),
+booking validation hardened (passengers 1–15, return date ≥ departure), and Electron
+statuses aligned (`declined` → `cancelled`).
 
 ### Status at a glance
 
@@ -47,6 +51,7 @@ date ≥ departure), and Electron statuses aligned (`declined` → `cancelled`).
 | Browser-tab favicon | 🟢 Completed (v2.12.0 — PNG set from owner logo) |
 | Low-resolution activity photos | ⚠️ Needs Attention (2 files soft) |
 | Email notifications (EmailJS) | 🟢 Completed (v2.10.0 — configured & end-to-end tested) |
+| EmailJS booking email template | 🟢 Model ready (v2.13.0 — paste `emailjs-template.html` in the dashboard) |
 | Google Sheets / Excel sync | 🔴 Not Started |
 | Payment system | 🔴 Not Started |
 | Production deployment / domain | 🔴 Not Started |
@@ -126,6 +131,7 @@ booking form and WhatsApp/email contact. Fully static — hostable anywhere, zer
 
 | Date | File / Section | Change |
 |---|---|---|
+| 2026-08-31 | `emailjs-template.html`, `js/config.js` | v2.13.0 EmailJS template model: ready-to-paste booking email template adapted to the form (16 params, styled body, {{to_email}}/{{to}}/{{reply_to}}) |
 | 2026-08-30 | `favicon-*.png`, `apple-touch-icon.png`, `index.html` header, `favicon.svg` | v2.12.0 favicon: PNG set from `logo.jpg` replaces old “M1” SVG (deleted) |
 | 2026-08-30 | `admin.html`, `electron/admin.html`, `js/config.js` | v2.11.0 admin access lock: SHA-256 gate (overlay + session + Lock btn), E2E-tested |
 | 2026-08-30 | `js/config.js`, `js/booking.js` | v2.10.0 EmailJS: real credentials wired, `init`/gate confirmed; end-to-end delivery tested (strict mode off, browser path) |
@@ -269,10 +275,12 @@ before being referenced in the HTML.
 Template ID `template_dux6pid` and the account Public Key in `js/config.js`. The template
 must use exactly these parameters: `to_email, from_name, from_phone, from_email,
 passengers, date, time, return_date, return_time, vehicle, service, pickup, destination,
-message, reply_to, subject`. Security note: the dashboard currently runs in **public-key
-mode** (strict mode disabled — the browser SDK `@emailjs/browser@4.4.1` cannot sign
-strict-mode requests, verified in its source); protect the account instead via the
-dashboard’s **authorized domains** list.
+message, reply_to, subject`. 📧 The ready-to-paste template model is in
+**`emailjs-template.html`** (v2.13.0): subject `{{subject}}`, To Email `{{to_email}}`,
+Reply-To `{{reply_to}}`, plus the full styled body. Security note: the dashboard
+currently runs in **public-key mode** (strict mode disabled — the browser SDK
+`@emailjs/browser@4.4.1` cannot sign strict-mode requests, verified in its source);
+protect the account instead via the dashboard’s **authorized domains** list.
 
 ---
 

@@ -13,15 +13,14 @@
    1) Create a free account at https://www.emailjs.com
    2) Go to "Email Services" > "Add New Service" > pick Gmail,
       connect your Gmail and copy the "Service ID".
-   3) Go to "Email Templates" > create a template that uses these
-      parameters (copy this list when building the template):
+   3) Go to "Email Templates" > open the template (TEMPLATE_ID) and edit it
+      with the ready-made model in `emailjs-template.html` (subject {{subject}},
+      To Email {{to_email}}, Reply-To {{reply_to}}, plus the body HTML). That
+      model matches the 16 parameters below one-to-one.
         from_name, from_email, from_phone, passengers,
         date, time, return_date, return_time, vehicle,
         service, pickup, destination, message, subject,
         reply_to, to_email
-      Add the parameter {{to_email}} as the destination of the
-      email. The template is used for BOTH the admin email
-      (to NEW_BOOKING_EMAIL) and the customer copy.
    4) Copy the "Template ID" and your "Public Key"
       (Account > General) and paste all three values below.
    ============================================================ */

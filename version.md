@@ -7,7 +7,22 @@
 
 ---
 
-## v2.12.0 — Favicon replaced with owner-logo PNG set (current)
+## v2.13.0 — EmailJS booking email template model (current)
+
+**Date:** 2026-08-31
+
+### Added
+- `emailjs-template.html`: ready-to-paste EmailJS email template adapted to the booking
+  form — subject `{{subject}}`, destination `{{to_email}}`, reply-to `{{reply_to}}`, and
+  a full styled body (Customer / Journey / Schedule / Booking / Message sections) using
+  the 16 parameters sent by `js/booking.js`. Setup instructions embedded in the file.
+
+### Changed
+- `js/config.js` setup comment now points to `emailjs-template.html`.
+
+---
+
+## v2.12.0 — Favicon replaced with owner-logo PNG set
 
 **Date:** 2026-08-30
 
@@ -281,9 +296,9 @@
 
 ## Planned / Unreleased
 
-- **v2.13.0** — Package the Electron admin into installers (launch already smoke-tested v31.7.7).
-- **v2.14.0** — Google Sheets / Excel booking sync.
-- **v2.15.0** — Production deployment + domain update (sitemap/robots/canonical/JSON-LD).
+- **v2.14.0** — Package the Electron admin into installers (launch already smoke-tested v31.7.7).
+- **v2.15.0** — Google Sheets / Excel booking sync.
+- **v2.16.0** — Production deployment + domain update (sitemap/robots/canonical/JSON-LD).
 - Ongoing — owner-photo replacement program: 36 stock slots remain
   (21 activities · 6 services · 5 day trips · 2 airport cards · Imlil transfer · Sprinter fleet photo),
   plus optional HD re-swaps for `buggy.jpg` and `trekking.jpg`.
