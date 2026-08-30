@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BLACK TRANSSIMO — Bookings</title>
+<style>
+  :root{--bg:#141414;--panel:#1c1c1c;--line:rgba(255,255,255,.09);--ivory:#faf9f6;--muted:#b9b3a6;--gold:#c9a227;--gold-l:#e3c565;--green:#7fe0a8;--red:#ff8a7a}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ivory);font-family:'Segoe UI',Arial,sans-serif;font-size:14px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(20,20,20,.96);z-index:5}
+  h1{font-size:18px;font-weight:600;letter-spacing:.02em}
+  h1 span{color:var(--gold)}
+  .stats{display:flex;gap:14px;font-size:12.5px;color:var(--muted)}
+  .stats b{color:var(--gold-l)}
+  .actions{display:flex;gap:10px}
+  button{background:var(--panel);color:var(--ivory);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;transition:.2s}
+  button:hover{border-color:var(--gold);color:var(--gold-l)}
+  button.primary{background:var(--gold);border-color:var(--gold);color:#14100a;font-weight:600}
+  button.primary:hover{background:var(--gold-l);color:#14100a}
+  main{padding:20px 22px}
+  .empty{color:var(--muted);text-align:center;padding:60px 0;font-size:15px}
+  .wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+  table{width:100%;border-collapse:collapse;min-width:1080px}
+  th{position:sticky;top:0;background:#202020;text-align:left;padding:10px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top;font-size:13px;color:var(--ivory)}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(201,162,39,.04)}
+  .msg{max-width:260px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .b-pending{background:rgba(201,162,39,.14);color:var(--gold-l);border:1px solid rgba(201,162,39,.4)}
+  .b-confirmed{background:rgba(127,224,168,.12);color:var(--green);border:1px solid rgba(127,224,168,.4)}
+  .b-cancelled{background:rgba(255,138,122,.12);color:var(--red);border:1px solid rgba(255,138,122,.4)}
+  select{background:var(--panel);color:var(--ivory);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12.5px}
+  select:focus{outline:none;border-color:var(--gold)}
+  .del{background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;padding:4px}
+  .del:hover{text-decoration:underline}
+  .toolbar{display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+  .toolbar input[type=text]{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ivory);padding:8px 12px;font-size:13px;flex:1;min-width:220px;max-width:360px}
+  .toolbar input[type=text]::placeholder{color:#6b6559}
+  .toolbar input[type=text]:focus{outline:none;border-color:var(--gold)}
+  @media(max-width:720px){header{flex-wrap:wrap}h1{width:100%}.stats{order:3;width:100%}}
+  .lock-wrap{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100}
+  .lock-wrap.hidden{display:none}
+  .lock-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:36px 32px;width:min(360px,90vw);text-align:center}
+  .lock-card h1{font-size:18px;font-weight:600}
+  .lock-card h1 span{color:var(--gold)}
+  .lock-card p{color:var(--muted);font-size:13px;margin-bottom:22px}
+  .lock-form{display:flex;flex-direction:column;gap:12px}
+  .lock-form input{background:#0f0f0f;border:1px solid var(--line);color:var(--ivory);padding:11px 14px;border-radius:8px;font-size:14px;outline:none}
+  .lock-form input:focus{border-color:var(--gold)}
+  .lock-form button{background:var(--gold);border-color:var(--gold);color:#14100a;font-weight:600;padding:11px;border-radius:8px;cursor:pointer}
+  .lock-error{color:var(--red);font-size:12.5px;margin-top:12px;min-height:1em}
+</style>
+</head>
+<body>
+  <div class="lock-wrap" id="lock">
+    <div class="lock-card">
+      <h1>BLACK <span>TRANSSIMO</span></h1>
+      <p>Admin — Booking Requests</p>
+      <form class="lock-form" id="unlockForm" autocomplete="off">
+        <input type="password" id="pwInput" placeholder="Password" autofocus>
+        <button type="submit">Unlock</button>
+      </form>
+      <p class="lock-error" id="lockErr"></p>
+    </div>
+  </div>
+
+  <header>
+    <div>
+      <h1>BLACK <span>TRANSSIMO</span> — Booking Requests</h1>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="actions">
+      <button id="btnRefresh">Refresh</button>
+      <button id="btnExport" class="primary">Export JSON</button>
+      <button id="btnLock">Lock</button>
+    </div>
+  </header>
+  <main>
+    <div class="toolbar">
+      <input type="text" id="search" placeholder="Search name, phone, destination...">
+      <button id="btnClear">Clear all</button>
+    </div>
+    <div class="wrap" id="tableWrap"></div>
+  </main>
+
+<script src="../js/config.js"></script>
+<script>
+var state = [];
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+function fmtDate(iso) {
+  if (!iso) return "—";
+  try {
+    var d = new Date(iso);
+    return d.toLocaleString();
+  } catch (e) { return iso; }
+}
+
+function render() {
+  var q = (document.getElementById("search").value || "").toLowerCase().trim();
+  var list = state.filter(function (b) {
+    if (!q) return true;
+    return (b.name + " " + b.phone + " " + b.destination + " " + b.service + " " + b.email).toLowerCase().indexOf(q) !== -1;
+  });
+
+  var pending = state.filter(function (b) { return b.status === "pending"; }).length;
+  document.getElementById("stats").innerHTML =
+    "<span>Total: <b>" + state.length + "</b></span>" +
+    "<span>Pending: <b>" + pending + "</b></span>";
+
+  var wrap = document.getElementById("tableWrap");
+  if (!list.length) {
+    wrap.innerHTML = '<div class="empty">' + (state.length ? "No matching bookings." : "No booking requests yet. Bookings made on the website will appear here.") + '</div>';
+    return;
+  }
+
+  var html = '<table><thead><tr>' +
+    "<th>#</th><th>Received</th><th>Name</th><th>Phone</th><th>Email</th><th>Date</th><th>Service</th><th>Pickup</th><th>Destination</th><th>Pax</th><th>Message</th><th>Status</th><th></th>" +
+    "</tr></thead><tbody>";
+
+  list.forEach(function (b, idx) {
+    var st = b.status || "pending";
+    html += "<tr data-id=\"" + esc(b.id) + "\">" +
+      "<td>" + (idx + 1) + "</td>" +
+      "<td>" + esc(fmtDate(b.created)) + "</td>" +
+      "<td>" + esc(b.name) + "</td>" +
+      "<td>" + esc(b.phone) + "</td>" +
+      "<td>" + esc(b.email || "—") + "</td>" +
+      "<td>" + esc(b.date || "—") + "</td>" +
+      "<td>" + esc(b.service || "—") + "</td>" +
+      "<td>" + esc(b.pickup || "—") + "</td>" +
+      "<td>" + esc(b.destination || "—") + "</td>" +
+      "<td>" + esc(b.passengers || "—") + "</td>" +
+      "<td class=\"msg\" title=\"" + esc(b.message) + "\">" + esc(b.message || "—") + "</td>" +
+      "<td><select data-field=\"status\" data-id=\"" + esc(b.id) + "\">" +
+        "<option value=\"pending\"" + (st === "pending" ? " selected" : "") + ">Pending</option>" +
+        "<option value=\"confirmed\"" + (st === "confirmed" ? " selected" : "") + ">Confirmed</option>" +
+        "<option value=\"cancelled\"" + (st === "cancelled" ? " selected" : "") + ">Cancelled</option>" +
+      "</select></td>" +
+      "<td><button class=\"del\" data-id=\"" + esc(b.id) + "\">Delete</button></td>" +
+    "</tr>";
+  });
+  html += "</tbody></table>";
+  wrap.innerHTML = html;
+}
+
+function refresh() {
+  state = window.bookings ? window.bookings.list() : [];
+  render();
+}
+
+function updateStatus(id, value) {
+  var i = state.findIndex(function (b) { return b.id === id; });
+  if (i === -1) return;
+  state[i].status = value;
+  state = window.bookings.save(state[i]);
+  render();
+}
+
+function removeOne(id) {
+  if (!confirm("Delete this booking request?")) return;
+  state = window.bookings.remove(id);
+  render();
+}
+
+function exportJSON() {
+  var data = JSON.stringify(state, null, 2);
+  var blob = new Blob([data], { type: "application/json" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "mar1-bookings-" + new Date().toISOString().slice(0, 10) + ".json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+document.getElementById("btnRefresh").addEventListener("click", refresh);
+document.getElementById("btnExport").addEventListener("click", exportJSON);
+document.getElementById("btnClear").addEventListener("click", function () {
+  if (!confirm("Delete ALL booking requests? This cannot be undone.")) return;
+  state = window.bookings.clear();
+  render();
+});
+document.getElementById("search").addEventListener("input", render);
+
+document.getElementById("tableWrap").addEventListener("click", function (ev) {
+  var btn = ev.target.closest(".del");
+  if (btn) removeOne(btn.getAttribute("data-id"));
+});
+
+document.getElementById("tableWrap").addEventListener("change", function (ev) {
+  var sel = ev.target.closest("[data-field=status]");
+  if (sel) updateStatus(sel.getAttribute("data-id"), sel.value);
+});
+
+window.addEventListener("storage", function (ev) {
+  if (ev.key === "mar1_bookings" || ev.key === null) refresh();
+});
+
+/* ---------- Access lock ---------- */
+var GATE_HASH = (window.MAR1_CONFIG && window.MAR1_CONFIG.ADMIN_PASSWORD_HASH) || "";
+var GATE_SESSION = "mar1_admin_session";
+var lock = document.getElementById("lock");
+
+function sha256Hex(str) {
+  if (!window.crypto || !window.crypto.subtle) return Promise.resolve("");
+  return crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)).then(function (buf) {
+    var bytes = new Uint8Array(buf), hex = "";
+    for (var i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, "0");
+    return hex;
+  });
+}
+function gateIsUnlocked() { return sessionStorage.getItem(GATE_SESSION) === "1"; }
+function gateShowApp() { lock.classList.add("hidden"); refresh(); }
+function gateShowLock(msg) {
+  sessionStorage.removeItem(GATE_SESSION);
+  lock.classList.remove("hidden");
+  var e = document.getElementById("lockErr");
+  if (e) e.textContent = msg || "";
+}
+document.getElementById("unlockForm").addEventListener("submit", function (ev) {
+  ev.preventDefault();
+  var e = document.getElementById("lockErr");
+  if (e) e.textContent = "";
+  if (!GATE_HASH || GATE_HASH.indexOf("YOUR_") === 0) {
+    if (e) e.textContent = "Admin access is locked: set ADMIN_PASSWORD_HASH in js/config.js first.";
+    return;
+  }
+  sha256Hex(document.getElementById("pwInput").value).then(function (hex) {
+    if (hex && hex === GATE_HASH.toLowerCase()) {
+      sessionStorage.setItem(GATE_SESSION, "1");
+      gateShowApp();
+    } else {
+      if (e) e.textContent = "Wrong password.";
+      document.getElementById("pwInput").value = "";
+      document.getElementById("pwInput").focus();
+    }
+  });
+});
+document.getElementById("btnLock").addEventListener("click", function () { gateShowLock(); });
+
+if (gateIsUnlocked()) { gateShowApp(); } else { gateShowLock(); }
+</script>
+</body>
+</html>

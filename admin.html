@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BLACK TRANSSIMO - Bookings (Admin)</title>
+<style>
+  :root{--black:#0a0a0a;--charcoal:#141414;--charcoal-2:#1c1c1c;--ivory:#faf9f6;--muted:#b9b3a6;--gold:#c9a227;--gold-light:#e3c565;--line:rgba(201,162,39,.25);--radius:14px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--black);color:var(--ivory);line-height:1.5;padding:24px;max-width:1400px;margin:0 auto}
+  h1{font-size:1.4rem;margin-bottom:4px}
+  h1 .dot{color:var(--gold)}
+  .sub{color:var(--muted);font-size:.85rem;margin-bottom:24px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:20px}
+  .toolbar input[type="text"]{flex:1;min-width:220px;background:var(--charcoal-2);border:1px solid var(--line);color:var(--ivory);padding:10px 14px;border-radius:8px;font-size:.9rem}
+  .toolbar select{background:var(--charcoal-2);border:1px solid var(--line);color:var(--ivory);padding:10px 12px;border-radius:8px;font-size:.9rem}
+  .toolbar button{background:var(--gold);color:#14100a;border:0;padding:10px 16px;border-radius:8px;font-weight:700;font-size:.88rem;cursor:pointer}
+  .toolbar button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}
+  .toolbar button.danger{background:#a33;color:#fff}
+  .stats{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:22px;color:var(--muted);font-size:.85rem}
+  .stats b{color:var(--gold-light)}
+  table{width:100%;border-collapse:collapse;font-size:.82rem;background:var(--charcoal);border-radius:var(--radius);overflow:hidden}
+  th,td{padding:10px 12px;text-align:left;vertical-align:top;border-bottom:1px solid rgba(255,255,255,.06)}
+  th{background:var(--charcoal-2);color:var(--gold-light);text-transform:uppercase;letter-spacing:.06em;font-size:.72rem;position:sticky;top:0}
+  tr:hover td{background:rgba(201,162,39,.05)}
+  .pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:700}
+  .pill.pending{background:rgba(201,162,39,.15);color:var(--gold-light)}
+  .pill.confirmed{background:rgba(37,211,102,.15);color:#7fe0a8}
+  .pill.cancelled{background:rgba(255,60,60,.15);color:#ff8a7a}
+  .msg{max-width:260px;color:var(--muted);white-space:pre-wrap}
+  .empty{text-align:center;color:var(--muted);padding:60px 0;font-size:.95rem}
+  .btn-mini{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:.72rem;cursor:pointer}
+  .btn-mini:hover{color:#fff;border-color:#fff}
+  a{color:var(--gold-light)}
+  @media(max-width:900px){.wrap{overflow-x:auto}table{min-width:1100px}}
+  .lock-wrap{position:fixed;inset:0;background:var(--black);display:flex;align-items:center;justify-content:center;z-index:100}
+  .lock-wrap.hidden{display:none}
+  .lock-card{background:var(--charcoal);border:1px solid var(--line);border-radius:var(--radius);padding:36px 32px;width:min(360px,90vw);text-align:center}
+  .lock-card h1{font-size:1.2rem}
+  .lock-card p{color:var(--muted);font-size:.85rem;margin-bottom:22px}
+  .lock-form{display:flex;flex-direction:column;gap:12px}
+  .lock-form input{background:var(--charcoal-2);border:1px solid var(--line);color:var(--ivory);padding:11px 14px;border-radius:8px;font-size:.92rem;outline:none}
+  .lock-form input:focus{border-color:var(--gold)}
+  .lock-form button{background:var(--gold);color:#14100a;border:0;padding:11px;border-radius:8px;font-weight:700;cursor:pointer;font-size:.9rem}
+  .lock-err{color:#ff8a7a;font-size:.82rem;margin-top:12px;min-height:1em}
+</style>
+</head>
+<body>
+  <div class="lock-wrap" id="lock">
+    <div class="lock-card">
+      <h1>BLACK <span class="dot">TRANSSIMO</span></h1>
+      <p>Admin — Booking Requests</p>
+      <form class="lock-form" id="unlockForm" autocomplete="off">
+        <input type="password" id="pwInput" placeholder="Password" autofocus>
+        <button type="submit" id="unlockBtn">Unlock</button>
+      </form>
+      <p class="lock-err" id="lockErr"></p>
+    </div>
+  </div>
+
+  <h1>BLACK <span class="dot">TRANSSIMO</span> - Bookings</h1>
+  <p class="sub">All booking requests are stored in this browser (localStorage). Open this page on the same device used to receive bookings.</p>
+
+  <div class="stats">
+    <span>Total: <b id="statTotal">0</b></span>
+    <span>Pending: <b id="statPending">0</b></span>
+    <span>Confirmed: <b id="statConfirmed">0</b></span>
+    <span>Today: <b id="statToday">0</b></span>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="Search name, phone, destination...">
+    <select id="statusFilter">
+      <option value="">All statuses</option>
+      <option value="pending">Pending</option>
+      <option value="confirmed">Confirmed</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+    <button id="exportBtn">Export CSV</button>
+    <button class="ghost" id="clearBtn">Clear all</button>
+    <button class="ghost" id="lockBtn">Lock</button>
+  </div>
+
+  <div class="wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Received</th>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Email</th>
+          <th>Pax</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Return</th>
+          <th>Vehicle</th>
+          <th>Service</th>
+          <th>Pickup</th>
+          <th>Destination</th>
+          <th>Message</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+<script src="js/config.js"></script>
+<script>
+(function () {
+  var KEY = "mar1_bookings";
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || []; }
+    catch (e) { return []; }
+  }
+  function save(list) {
+    localStorage.setItem(KEY, JSON.stringify(list));
+  }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function dash(v) {
+    return v ? esc(v) : "&mdash;";
+  }
+  function fmtDate(iso) {
+    if (!iso) return "&mdash;";
+    var d = new Date(iso);
+    return isNaN(d.getTime()) ? esc(iso) : d.toLocaleString();
+  }
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function pill(status) {
+    var s = (status || "pending").toLowerCase();
+    return '<span class="pill ' + esc(s) + '">' + esc(s) + '</span>';
+  }
+  function setStatus(id, status) {
+    var list = load();
+    list.forEach(function (b) { if (b.id === id) b.status = status; });
+    save(list);
+    render();
+  }
+  function remove(id) {
+    if (!confirm("Delete this booking?")) return;
+    save(load().filter(function (b) { return b.id !== id; }));
+    render();
+  }
+
+  function render() {
+    var list = load();
+    var q = (document.getElementById("search").value || "").toLowerCase().trim();
+    var st = document.getElementById("statusFilter").value;
+    var today = todayStr();
+
+    var total = list.length;
+    var pending = list.filter(function (b) { return (b.status || "pending") === "pending"; }).length;
+    var confirmed = list.filter(function (b) { return b.status === "confirmed"; }).length;
+    var todayCount = list.filter(function (b) { return (b.date || "").indexOf(today) === 0; }).length;
+    document.getElementById("statTotal").textContent = total;
+    document.getElementById("statPending").textContent = pending;
+    document.getElementById("statConfirmed").textContent = confirmed;
+    document.getElementById("statToday").textContent = todayCount;
+
+    var rows = list.filter(function (b) {
+      var hay = [b.name, b.phone, b.email, b.pickup, b.destination, b.service, b.message].join(" ").toLowerCase();
+      var okQ = !q || hay.indexOf(q) !== -1;
+      var okS = !st || (b.status || "pending") === st;
+      return okQ && okS;
+    });
+
+    var tb = document.getElementById("tbody");
+    if (!rows.length) {
+      tb.innerHTML = '<tr><td colspan="16" class="empty">No bookings found.</td></tr>';
+      return;
+    }
+    tb.innerHTML = rows.map(function (b) {
+      return '<tr>' +
+        '<td>' + esc(b.id || "&mdash;") + '</td>' +
+        '<td>' + fmtDate(b.created) + '</td>' +
+        '<td>' + esc(b.name) + '</td>' +
+        '<td>' + esc(b.phone) + '</td>' +
+        '<td>' + dash(b.email) + '</td>' +
+        '<td>' + dash(b.passengers) + '</td>' +
+        '<td>' + dash(b.date) + '</td>' +
+        '<td>' + dash(b.time) + '</td>' +
+        '<td>' + dash(b.returnDate ? b.returnDate + (b.returnTime ? " " + b.returnTime : "") : "") + '</td>' +
+        '<td>' + dash(b.vehicle) + '</td>' +
+        '<td>' + dash(b.service) + '</td>' +
+        '<td>' + dash(b.pickup) + '</td>' +
+        '<td>' + dash(b.destination) + '</td>' +
+        '<td class="msg">' + dash(b.message) + '</td>' +
+        '<td>' + pill(b.status) + '</td>' +
+        '<td>' +
+          '<select class="btn-mini" onchange="window.__setStatus(\'' + esc(b.id) + '\', this.value)">' +
+            '<option value="pending"' + (b.status === "pending" ? " selected" : "") + '>pending</option>' +
+            '<option value="confirmed"' + (b.status === "confirmed" ? " selected" : "") + '>confirmed</option>' +
+            '<option value="cancelled"' + (b.status === "cancelled" ? " selected" : "") + '>cancelled</option>' +
+          '</select> ' +
+          '<button class="btn-mini" onclick="window.__remove(\'' + esc(b.id) + '\')">Delete</button>' +
+        '</td>' +
+      '</tr>';
+    }).join("");
+  }
+
+  function exportCSV() {
+    var list = load();
+    if (!list.length) { alert("No bookings to export."); return; }
+    var head = ["id", "created", "name", "phone", "email", "passengers", "date", "time", "returnDate", "returnTime", "vehicle", "service", "pickup", "destination", "message", "status"];
+    var csv = [head.join(",")];
+    list.forEach(function (b) {
+      csv.push(head.map(function (k) {
+        var v = b[k] == null ? "" : String(b[k]);
+        return '"' + v.replace(/"/g, '""') + '"';
+      }).join(","));
+    });
+    var blob = new Blob(["\uFEFF" + csv.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "mar1-bookings.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  window.__setStatus = setStatus;
+  window.__remove = remove;
+  document.getElementById("search").addEventListener("input", render);
+  document.getElementById("statusFilter").addEventListener("change", render);
+  document.getElementById("exportBtn").addEventListener("click", exportCSV);
+  document.getElementById("clearBtn").addEventListener("click", function () {
+    if (!confirm("Delete ALL bookings? This cannot be undone.")) return;
+    save([]);
+    render();
+  });
+  /* ---------- Access lock ---------- */
+  var HASH = (window.MAR1_CONFIG && window.MAR1_CONFIG.ADMIN_PASSWORD_HASH) || "";
+  var SESSION_KEY = "mar1_admin_session";
+  var lock = document.getElementById("lock");
+  var lockBtn = document.getElementById("lockBtn");
+
+  function sha256Hex(str) {
+    if (!window.crypto || !window.crypto.subtle) return Promise.resolve("");
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)).then(function (buf) {
+      var bytes = new Uint8Array(buf), hex = "";
+      for (var i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, "0");
+      return hex;
+    });
+  }
+  function isUnlocked() { return sessionStorage.getItem(SESSION_KEY) === "1"; }
+  function showApp() {
+    lock.classList.add("hidden");
+    lockBtn.textContent = "Lock";
+    render();
+  }
+  function showLock(msg) {
+    sessionStorage.removeItem(SESSION_KEY);
+    lock.classList.remove("hidden");
+    lockBtn.textContent = "Unlock";
+    var e = document.getElementById("lockErr");
+    if (e) e.textContent = msg || "";
+  }
+  document.getElementById("unlockForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var e = document.getElementById("lockErr");
+    if (e) e.textContent = "";
+    if (!HASH || HASH.indexOf("YOUR_") === 0) {
+      if (e) e.textContent = "Admin access is locked: set ADMIN_PASSWORD_HASH in js/config.js first.";
+      return;
+    }
+    sha256Hex(document.getElementById("pwInput").value).then(function (hex) {
+      if (hex && hex === HASH.toLowerCase()) {
+        sessionStorage.setItem(SESSION_KEY, "1");
+        showApp();
+      } else {
+        if (e) e.textContent = "Wrong password.";
+        document.getElementById("pwInput").value = "";
+        document.getElementById("pwInput").focus();
+      }
+    });
+  });
+  lockBtn.addEventListener("click", function () { showLock(); });
+
+  if (isUnlocked()) { showApp(); } else { showLock(); }
+})();
+</script>
+</body>
+</html>

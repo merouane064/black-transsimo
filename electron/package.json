@@ -1,0 +1,12 @@
+{
+  "name": "black-transsimo-desktop",
+  "version": "1.0.0",
+  "description": "BLACK TRANSSIMO — booking management desktop app",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^31.3.0"
+  }
+}
