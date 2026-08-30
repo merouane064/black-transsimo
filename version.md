@@ -7,7 +7,22 @@
 
 ---
 
-## v2.13.0 — EmailJS booking email template model (current)
+## v2.13.1 — EmailJS recipient mapping fix (current)
+
+**Date:** 2026-08-31
+
+### Fixed / Documented
+- Diagnosis: when the template’s **To Email** setting is empty or hard-coded to the
+  account Gmail, EmailJS delivers EVERY send to that default inbox — the owner then
+  receives BOTH the admin copy and the client copy, while the client gets nothing.
+  The site code was correct (two sends: admin → `NEW_BOOKING_EMAIL`, client →
+  customer email).
+- `emailjs-template.html`: **To Email must be exactly `{{to_email}}`** — requirement now
+  emphasized in the embedded setup instructions (Settings tab).
+
+---
+
+## v2.13.0 — EmailJS booking email template model
 
 **Date:** 2026-08-31
 

@@ -14,11 +14,15 @@ Current focus: **replacing remote stock photography with the owner's own photos*
 image at a time (each supplied as a clearly-named file on the Desktop, verified byte-for-byte
 by MD5 hash before install — the tooling cannot view images).
 
-**Most recent work (v2.13.0):** a ready-to-paste EmailJS email template model
-(`emailjs-template.html`) was created, adapted one-to-one to the booking form — subject
-`{{subject}}`, destination `{{to_email}}`, reply-to `{{reply_to}}`, and a styled body
-covering Customer / Journey / Schedule / Booking / Message. Before that (v2.12.0): the old
-“M1” tab favicon was replaced by a PNG set generated from the owner’s square logo
+**Most recent work (v2.13.1):** diagnosed a recipient-mapping bug — if the template’s
+**To Email** is empty or fixed to the account Gmail, the owner receives BOTH copies
+(admin + client) and the client gets nothing. The site code was correct; the template’s
+**Settings → To Email must be exactly `{{to_email}}`** (now stressed in
+`emailjs-template.html`). Before that (v2.13.0): a ready-to-paste EmailJS email template
+model (`emailjs-template.html`) was created, adapted one-to-one to the booking form —
+subject `{{subject}}`, destination `{{to_email}}`, reply-to `{{reply_to}}`, and a styled
+body covering Customer / Journey / Schedule / Booking / Message. Before that (v2.12.0):
+the old “M1” tab favicon was replaced by a PNG set generated from the owner’s square logo
 (`img/logo.jpg` → `favicon-16/32/48/192/512.png` + `apple-touch-icon.png`); `favicon.svg`
 deleted. Before that (v2.11.0): the admin views (`admin.html` and `electron/admin.html`)
 are protected by a password lock (SHA-256 hash in `js/config.js`, per-tab session, manual
@@ -51,7 +55,7 @@ statuses aligned (`declined` → `cancelled`).
 | Browser-tab favicon | 🟢 Completed (v2.12.0 — PNG set from owner logo) |
 | Low-resolution activity photos | ⚠️ Needs Attention (2 files soft) |
 | Email notifications (EmailJS) | 🟢 Completed (v2.10.0 — configured & end-to-end tested) |
-| EmailJS booking email template | 🟢 Model ready (v2.13.0 — paste `emailjs-template.html` in the dashboard) |
+| EmailJS booking email template | 🟢 Model ready (v2.13.0/1 — paste `emailjs-template.html`; **To Email = `{{to_email}}`**) |
 | Google Sheets / Excel sync | 🔴 Not Started |
 | Payment system | 🔴 Not Started |
 | Production deployment / domain | 🔴 Not Started |
@@ -131,7 +135,8 @@ booking form and WhatsApp/email contact. Fully static — hostable anywhere, zer
 
 | Date | File / Section | Change |
 |---|---|---|
-| 2026-08-31 | `emailjs-template.html`, `js/config.js` | v2.13.0 EmailJS template model: ready-to-paste booking email template adapted to the form (16 params, styled body, {{to_email}}/{{to}}/{{reply_to}}) |
+| 2026-08-31 | `emailjs-template.html` | v2.13.1 EmailJS recipient fix: **To Email must be `{{to_email}}`** — empty/fixed field sends both copies to the owner and nothing to the client (documented) |
+| 2026-08-31 | `emailjs-template.html`, `js/config.js` | v2.13.0 EmailJS template model: ready-to-paste booking email template adapted to the form (16 params, styled body, {{to_email}}/{{reply_to}}) |
 | 2026-08-30 | `favicon-*.png`, `apple-touch-icon.png`, `index.html` header, `favicon.svg` | v2.12.0 favicon: PNG set from `logo.jpg` replaces old “M1” SVG (deleted) |
 | 2026-08-30 | `admin.html`, `electron/admin.html`, `js/config.js` | v2.11.0 admin access lock: SHA-256 gate (overlay + session + Lock btn), E2E-tested |
 | 2026-08-30 | `js/config.js`, `js/booking.js` | v2.10.0 EmailJS: real credentials wired, `init`/gate confirmed; end-to-end delivery tested (strict mode off, browser path) |

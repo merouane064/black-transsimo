@@ -18,12 +18,17 @@
          {{subject}}
     4. CONTENT tab — Email body: replace everything with the block between
        <!-- EMAIL BODY START --> and <!-- EMAIL BODY END --> below.
-    5. SETTINGS tab:
+    5. SETTINGS tab — CRITICAL (this is what causes duplicate/missing emails):
          Name           : black-transsimo-booking
          From Name      : BLACK TRANSSIMO
          From Email     : (leave as the connected Gmail)
          Reply-To       : {{reply_to}}
-         To Email       : {{to_email}}
+         To Email       : {{to_email}}   <-- MUST be exactly {{to_email}},
+                        otherwise every email lands in the account's own inbox
+                        (you receive BOTH copies, the client receives none).
+                       If "To Email" shows your Gmail address or the words
+                       "Your email address" / "(default)", replace it with the
+                       parameter {{to_email}}.
          Auto-Reply     : OFF   (the site code already sends the client copy)
     6. Save. The same template serves BOTH emails sent by js/booking.js:
          - admin copy  : to_email = NEW_BOOKING_EMAIL,
