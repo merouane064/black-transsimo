@@ -34,7 +34,9 @@
   a{color:var(--gold-light)}
 
   /* ---------- Status editor (radio + save) ---------- */
-  .status-editor{display:flex;flex-direction:column;gap:8px;min-width:150px}
+  .row-actions{display:flex;flex-direction:column;gap:8px;min-width:150px;align-items:flex-start}
+  .row-actions > .btn-mini{align-self:flex-start}
+  .status-editor{display:flex;flex-direction:column;gap:8px;width:100%}
   .status-radios{display:flex;flex-direction:column;gap:4px}
   .status-radios label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.78rem;color:var(--muted);padding:2px 4px;border-radius:6px;user-select:none}
   .status-radios label:hover{background:rgba(201,162,39,.08)}
@@ -308,7 +310,9 @@
 
   /* Build the radio + "Save status" status editor for a row. The officially
      saved status (from Google Sheets) is what's checked, unless the admin has
-     selected a draft that hasn't been saved yet. */
+     selected a draft that hasn't been saved yet. No inline event handlers are
+     used — actions are handled via event delegation (see bindings below), so
+     the booking id lives in data-* attributes and can't break the HTML. */
   function statusCell(b) {
     var id = b.id || "";
     var official = normalized(b.status);
@@ -317,23 +321,24 @@
     var opts = VALID_STATUSES.map(function (s) {
       var checked = (s === selected) ? " checked" : "";
       var selClass = (s === selected) ? " sel" : "";
+      var locked = saving ? " disabled" : "";
       return '<label class="' + s + selClass + '">' +
-        '<input type="radio" name="' + esc(name) + '" value="' + s + '"' + checked +
-        ' onchange="window.__selectStatus(' + JSON.stringify(id) + ', \'' + s + '\')">' +
+        '<input type="radio" name="' + esc(name) + '" value="' + s + '"' + checked + locked + '>' +
         '<span class="dot"></span><span>' + s + '</span></label>';
     }).join("");
     var dirty = draftStatuses.hasOwnProperty(id);
     var btn = saving
       ? '<button class="save-status" disabled>Save status</button>'
-      : '<button class="save-status' + (dirty ? " dirty" : "") + '" ' +
-        'onclick="window.__saveStatus(' + JSON.stringify(id) + ')">Save status</button>';
+      : '<button class="save-status' + (dirty ? " dirty" : "") + '">Save status</button>';
     var fb = '<span class="save-feedback' + (feedbackClass(id) ? " " + feedbackClass(id) : "") + '" id="fb_' + esc(id) + '">' + feedbackText(id) + '</span>';
-    return '<div class="status-editor" data-id="' + esc(id) + '">' +
-      '<div class="status-radios">' + opts + '</div>' +
-      btn + fb +
-      (dirty ? '<button class="btn-mini" onclick="window.__discardStatus(' + JSON.stringify(id) + ')">Reset</button>' : '') +
-    '</div>' +
-    '<button class="btn-mini" onclick="window.__remove(' + JSON.stringify(id) + ')">Delete</button>';
+    return '<div class="row-actions" data-id="' + esc(id) + '">' +
+      '<div class="status-editor">' +
+        '<div class="status-radios">' + opts + '</div>' +
+        btn + fb +
+        (dirty ? '<button class="btn-mini reset-status">Reset</button>' : '') +
+      '</div>' +
+      '<button class="btn-mini del-status">Delete</button>' +
+    '</div>';
   }
 
   /* Radio selection — only records a draft for this row. Does NOT touch
@@ -428,9 +433,25 @@
     document.body.removeChild(a);
   }
 
-  window.__selectStatus = selectStatus;
-  window.__saveStatus = saveStatus;
-  window.__discardStatus = discardStatus;
+  /* Row actions are handled via event delegation so booking ids live safely in
+     data-* attributes (no fragile inline JS with embedded values). */
+  var tbody = document.getElementById("tbody");
+  tbody.addEventListener("change", function (ev) {
+    var t = ev.target;
+    if (!t || t.type !== "radio" || !t.name || t.name.indexOf("st_") !== 0) return;
+    var row = t.closest(".row-actions");
+    if (!row) return;
+    selectStatus(row.getAttribute("data-id"), t.value);
+  });
+  tbody.addEventListener("click", function (ev) {
+    var t = ev.target;
+    var row = t.closest(".row-actions");
+    if (!row) return;
+    var id = row.getAttribute("data-id");
+    if (t.classList && t.classList.contains("save-status")) saveStatus(id);
+    else if (t.classList && t.classList.contains("reset-status")) discardStatus(id);
+    else if (t.classList && t.classList.contains("del-status")) remove(id);
+  });
   window.__remove = remove;
   document.getElementById("search").addEventListener("input", render);
   document.getElementById("statusFilter").addEventListener("change", render);
