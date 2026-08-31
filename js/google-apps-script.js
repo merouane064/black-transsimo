@@ -92,6 +92,17 @@ function getSheet_() {
 function handle_(data) {
   try {
     var action = String(data.action || "").toLowerCase();
+    if (action === "ping") {
+      /* Diagnostic: confirms which version is live and echoes back exactly what
+         arrived, so a redeploy can be verified. */
+      return json_({
+        ok: true,
+        version: "2.14.3",
+        note: "ping received",
+        actionSeen: action,
+        params: data
+      });
+    }
     if (action === "create") {
       return create_(getSheet_(), data);
     }
