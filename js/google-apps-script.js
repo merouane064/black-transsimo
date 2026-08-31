@@ -97,7 +97,7 @@ function handle_(data) {
          arrived, so a redeploy can be verified. */
       return json_({
         ok: true,
-        version: "2.14.3",
+        version: "2.14.4",
         note: "ping received",
         actionSeen: action,
         params: data
@@ -106,7 +106,7 @@ function handle_(data) {
     if (action === "create") {
       return create_(getSheet_(), data);
     }
-    if (action === "updateStatus") {
+    if (action === "updatestatus") {
       return updateStatus_(getSheet_(), data);
     }
     return list_(getSheet_());

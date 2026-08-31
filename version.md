@@ -7,6 +7,29 @@
 
 ---
 
+## v2.14.4 — Fix: `updateStatus` never matched (case bug) — status still not syncing
+
+**Date:** 2026-08-31
+
+### Bug (found via live testing on the deployed Web App)
+- `handle_()` lowercased the incoming `action` (`String(data.action||"").toLowerCase()`)
+  but the `updateStatus` branch compared against the camelCase literal `"updateStatus"`.
+  Since `"updatestatus" !== "updateStatus"`, a status change **always fell through** to
+  the read-only list and never wrote to the sheet.
+- Verified live: `?action=create` appended a row (matched), but `?action=updateStatus&...`
+  returned the list (did not match).
+
+### Fixed
+- The branch now compares against the lowercase literal `"updatestatus"`.
+- Ping version bumped to `2.14.4` for verification.
+
+### Requires
+- Re-deploy a NEW VERSION of the Apps Script (`Deploy → Manage deployments → ✏️`
+  on the same Web app row → New version → Deploy) and confirm `?action=ping` returns
+  `version: "2.14.4"`.
+
+---
+
 ## v2.14.2 — Fix: status/booking sync lost (POST body dropped by 302 redirect)
 
 **Date:** 2026-08-31
