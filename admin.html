@@ -143,18 +143,15 @@
     var s = (status || "pending").toLowerCase();
     return '<span class="pill ' + esc(s) + '">' + esc(s) + '</span>';
   }
-  /* Push a status change to the Google Sheet (if configured & the booking is
-     there). Best-effort — resolves silently on failure so the local UI always
-     updates. */
+  /* Push a status change to the Google Sheet (if configured). Best-effort —
+     resolves silently on failure so the local UI always updates. Sent as URL
+     query parameters: Google's /exec redirect drops a POST body, but query
+     parameters survive the redirect. */
   function syncStatusToSheets(id, status) {
     if (!SHEETS || SHEETS.indexOf("/exec") === -1) return Promise.resolve();
-    return fetch(SHEETS, {
-      method: "POST",
-      mode: "cors",
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "updateStatus", id: id, status: status })
-    }).then(function () {}, function () {});
+    return fetch(SHEETS + "?action=updateStatus&id=" + encodeURIComponent(id) +
+      "&status=" + encodeURIComponent(status), { method: "GET" })
+      .then(function () {}, function () {});
   }
 
   function setStatus(id, status) {

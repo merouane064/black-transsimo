@@ -8,15 +8,14 @@
  * so they never appeared in the owner's admin panel. This Apps Script Web App
  * gives bookings a shared, always-visible home: a Google Sheet.
  *
- * WHAT IT DOES
- * ------------
- *  • POST (doPost):   appends a new booking to the sheet's "Bookings" tab
- *                     (action "create", the default).
- *  • POST (doPost):   updates an existing booking's status by id
- *                     (action "updateStatus" + { id, status }) — used so the
- *                     admin's Status dropdown stays synced with the sheet.
- *  • GET  (doGet):    returns ALL bookings as JSON so the admin panel can
- *                     display them (cross-origin CORS enabled).
+ * WHAT IT DOES  (all requests carry their data as **query parameters** — see
+ * "IMPORTANT" below for why)
+ * ----------------s
+ *  • admin refresh            → GET /          → returns ALL bookings as JSON
+ *  • new booking / send       → GET ?action=create&id=...&name=...&status=...
+ *                                             → appends a row
+ *  • admin Status dropdown    → GET ?action=updateStatus&id=...&status=...
+ *                                             → updates the status column by id
  *
  * SETUP (5 minutes) — see google-apps-script-setup.md for the full walkthrough.
  * ===============
@@ -32,9 +31,18 @@
  *        Who has access: Anyone  → Deploy → copy the /exec Web App URL.
  *  5. Paste that URL into js/config.js as  SHEETS.endpoint.
  *
- *  IMPORTANT after editing this file: re-deploy a NEW VERSION
- *  (Deploy → Manage deployments → ✏️ → New version), otherwise the old code
- *  keeps running.
+ *  IMPORTANT (why query parameters, not a request body):
+ *  ----------
+ *  A Web App /exec URL answers a write request with a **302 redirect** to
+ *  script.googleusercontent.com. A browser (and most HTTP clients) following
+ *  that redirect drops the POST body — the script then receives an empty
+ *  payload and would generate a brand-new id / do nothing. Data placed in the
+ *  URL query string survives the redirect untouched, so that's what the site
+ *  sends. The JSON request body is still parsed as a fallback.
+ *
+ *  ALSO IMPORTANT: after editing THIS file you must re-deploy a NEW VERSION
+ *  (Deploy → Manage deployments → ✏️ → New version → Deploy) for the running
+ *  Web App to pick it up. The /exec URL itself stays unchanged.
  *
  ******************************************************************************/
 
@@ -45,6 +53,26 @@ var HEADERS = [
   "date", "time", "returnDate", "returnTime", "vehicle", "service",
   "pickup", "destination", "message"
 ];
+
+/* Collect request data. Query parameters (e.parameter) are the primary source
+   because they survive the 302 redirect; a JSON body is a secondary source. */
+function params_(e) {
+  var p = {};
+  if (e && e.parameter) {
+    for (var k in e.parameter) {
+      if (Object.prototype.hasOwnProperty.call(e.parameter, k)) p[k] = e.parameter[k];
+    }
+  }
+  if (e && e.postData && e.postData.contents) {
+    try {
+      var body = JSON.parse(e.postData.contents);
+      for (var k2 in body) {
+        if (Object.prototype.hasOwnProperty.call(body, k2)) p[k2] = body[k2];
+      }
+    } catch (err) { /* ignore malformed body — query params may still be set */ }
+  }
+  return p;
+}
 
 /* Resolve the sheet to write/read. Prefers the tab named exactly "Bookings",
    but falls back to the first tab (and creates one if the spreadsheet is empty)
@@ -60,51 +88,37 @@ function getSheet_() {
   return created;
 }
 
-function doGet_(e) {
+/* Single router for both GET and POST. */
+function handle_(data) {
   try {
-    var sheet = getSheet_();
-
-    var rows = sheet.getDataRange().getValues();
-    if (rows.length === 0) {
-      return json_({ ok: true, bookings: [] });
+    var action = String(data.action || "").toLowerCase();
+    if (action === "create") {
+      return create_(getSheet_(), data);
     }
-    var header = rows[0];
-    var bookings = [];
-    for (var r = 1; r < rows.length; r++) {
-      var obj = {};
-      for (var c = 0; c < header.length; c++) {
-        obj[String(header[c]).trim()] = rows[r][c];
-      }
-      bookings.push(obj);
+    if (action === "updateStatus") {
+      return updateStatus_(getSheet_(), data);
     }
-    bookings.reverse(); /* newest first */
-    return json_({ ok: true, bookings: bookings });
+    return list_(getSheet_());
   } catch (err) {
     return json_({ ok: false, error: String(err) });
   }
 }
 
-function doPost_(e) {
-  try {
-    var sheet = getSheet_();
-
-    var data = {};
-    if (e && e.postData && e.postData.contents) {
-      try {
-        data = JSON.parse(e.postData.contents);
-      } catch (err) {
-        throw new Error("Invalid JSON body: " + err);
-      }
+/* Return every booking (newest first) — used by the admin panel. */
+function list_(sheet) {
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length === 0) return json_({ ok: true, bookings: [] });
+  var header = rows[0];
+  var bookings = [];
+  for (var r = 1; r < rows.length; r++) {
+    var obj = {};
+    for (var c = 0; c < header.length; c++) {
+      obj[String(header[c]).trim()] = rows[r][c];
     }
-
-    var action = data.action || "create";
-    if (action === "updateStatus") {
-      return updateStatus_(sheet, data);
-    }
-    return create_(sheet, data);
-  } catch (err) {
-    return json_({ ok: false, error: String(err) });
+    bookings.push(obj);
   }
+  bookings.reverse();
+  return json_({ ok: true, bookings: bookings });
 }
 
 /* Append a new booking row. */
@@ -152,11 +166,10 @@ function updateStatus_(sheet, data) {
 
 /* doGet / doPost wrappers so the file maps cleanly to Deployment types. */
 function doGet(e) {
-  // Wrap in try/catch so an early throw still returns JSON.
-  try { return doGet_(e); } catch (err) { return json_({ ok: false, error: String(err) }); }
+  try { return handle_(params_(e)); } catch (err) { return json_({ ok: false, error: String(err) }); }
 }
 function doPost(e) {
-  try { return doPost_(e); } catch (err) { return json_({ ok: false, error: String(err) }); }
+  try { return handle_(params_(e)); } catch (err) { return json_({ ok: false, error: String(err) }); }
 }
 
 function json_(obj) {

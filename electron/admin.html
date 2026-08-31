@@ -192,13 +192,9 @@ function updateStatus(id, value) {
     state = window.bookings.save(state[i]);
   }
   if (SHEETS && SHEETS.indexOf("/exec") !== -1) {
-    fetch(SHEETS, {
-      method: "POST",
-      mode: "cors",
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "updateStatus", id: id, status: value })
-    }).catch(function () { });
+    fetch(SHEETS + "?action=updateStatus&id=" + encodeURIComponent(id) +
+      "&status=" + encodeURIComponent(value), { method: "GET" })
+      .catch(function () { });
   }
   render();
 }

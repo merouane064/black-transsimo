@@ -141,37 +141,34 @@ window.BOOKING = (function () {
 
   /* Best-effort push of a booking to the Google Sheets Web App (configured via
      CFG.SHEETS.endpoint). Never blocks the user flow: resolves quietly whether
-     it succeeded or not. */
+     it succeeded or not. Data is sent as URL query parameters — Google's /exec
+     redirect drops a POST body, but query parameters survive the redirect. */
   function syncToSheets(booking) {
     var endpoint = (CFG.SHEETS && CFG.SHEETS.endpoint) || "";
     if (!endpoint || endpoint.indexOf("/exec") === -1) {
       return Promise.resolve();
     }
-    var payload = {
-      id: booking.id,
-      created: booking.created,
-      status: booking.status,
-      name: booking.name,
-      phone: booking.phone,
-      email: booking.email || "",
-      passengers: booking.passengers,
-      date: booking.date,
-      time: booking.time || "",
-      returnDate: booking.returnDate || "",
-      returnTime: booking.returnTime || "",
-      vehicle: booking.vehicle || "",
-      service: booking.service,
-      pickup: booking.pickup,
-      destination: booking.destination,
-      message: booking.message || ""
-    };
-    return fetch(endpoint, {
-      method: "POST",
-      mode: "cors",
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
-    }).then(function () {}, function () {});
+    var q = [
+      "action=create",
+      "id=" + encodeURIComponent(booking.id || ""),
+      "created=" + encodeURIComponent(booking.created || ""),
+      "status=" + encodeURIComponent(booking.status || "pending"),
+      "name=" + encodeURIComponent(booking.name || ""),
+      "phone=" + encodeURIComponent(booking.phone || ""),
+      "email=" + encodeURIComponent(booking.email || ""),
+      "passengers=" + encodeURIComponent(booking.passengers || ""),
+      "date=" + encodeURIComponent(booking.date || ""),
+      "time=" + encodeURIComponent(booking.time || ""),
+      "returnDate=" + encodeURIComponent(booking.returnDate || ""),
+      "returnTime=" + encodeURIComponent(booking.returnTime || ""),
+      "vehicle=" + encodeURIComponent(booking.vehicle || ""),
+      "service=" + encodeURIComponent(booking.service || ""),
+      "pickup=" + encodeURIComponent(booking.pickup || ""),
+      "destination=" + encodeURIComponent(booking.destination || ""),
+      "message=" + encodeURIComponent(booking.message || "")
+    ].join("&");
+    return fetch(endpoint + "?" + q, { method: "GET" })
+      .then(function () {}, function () {});
   }
 
   function handleSubmit(ev) {

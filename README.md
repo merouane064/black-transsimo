@@ -56,7 +56,7 @@ statuses aligned (`declined` → `cancelled`).
 | Low-resolution activity photos | ⚠️ Needs Attention (2 files soft) |
 | Email notifications (EmailJS) | 🟢 Completed (v2.10.0 — configured & end-to-end tested) |
 | EmailJS booking email template | 🟢 Model ready (v2.13.0/1 — paste `emailjs-template.html`; **To Email = `{{to_email}}`**) |
-| Google Sheets booking sync | 🟢 Code ready (v2.14.x — Apps Script append + admin status sync; live once `SHEETS.endpoint` is set — see `google-apps-script-setup.md`) |
+| Google Sheets booking sync | 🟢 Code ready (v2.14.2 — Apps Script query-param append + admin status sync; live once `SHEETS.endpoint` is set — see `google-apps-script-setup.md`) |
 | Payment system | 🔴 Not Started |
 | Production deployment / domain | 🔴 Not Started |
 
@@ -137,7 +137,8 @@ booking form and WhatsApp/email contact. Fully static — hostable anywhere, zer
 
 | Date | File / Section | Change |
 |---|---|---|
-| 2026-08-31 | `js/google-apps-script.js`, `admin.html`, `electron/admin.html`, `google-apps-script-setup.md` | v2.14.1 Admin Status dropdown synced to Sheets: Apps Script `action:"updateStatus"` updates a row's status by id; both admins push the new status to the Sheet on change (in addition to local). Requires a new deploy of the Apps Script. |
+| 2026-08-31 | `js/google-apps-script.js`, `js/booking.js`, `admin.html`, `electron/admin.html`, `google-apps-script-setup.md` | v2.14.2 **Critical fix**: Apps Script `/exec` 302 redirect was dropping the POST body, so bookings/status never persisted (status reset to pending on refresh). All sync now sent as **URL query parameters** which survive the redirect; Apps Script reads `e.parameter`. Requires re-deploying a new Apps Script version. |
+| 2026-08-31 | `js/google-apps-script.js`, `admin.html`, `electron/admin.html`, `google-apps-script-setup.md` | v2.14.1 Admin Status dropdown synced to Sheets: Apps Script `action:"updateStatus"` updates a row's status by id; both admins push the new status to the Sheet on change (in addition to local). |
 | 2026-08-31 | `js/google-apps-script.js`, `google-apps-script-setup.md`, `js/config.js`, `js/booking.js`, `admin.html`, `electron/admin.html` | v2.14.0 Google Sheets booking sync: Apps Script Web App (POST append + GET JSON + auto-fallback tab), site pushes each booking to it, both admins fetch + merge with local. Fixes bookings only ever existing in the visitor's browser `localStorage` (email was sent, admin stayed empty). Not live until `SHEETS.endpoint` is set (see setup doc). |
 | 2026-08-31 | `emailjs-template.html` | v2.13.1 EmailJS recipient fix: **To Email must be `{{to_email}}`** — empty/fixed field sends both copies to the owner and nothing to the client (documented) |
 | 2026-08-31 | `emailjs-template.html`, `js/config.js` | v2.13.0 EmailJS template model: ready-to-paste booking email template adapted to the form (16 params, styled body, {{to_email}}/{{reply_to}}) |

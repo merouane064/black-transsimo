@@ -7,6 +7,39 @@
 
 ---
 
+## v2.14.2 — Fix: status/booking sync lost (POST body dropped by 302 redirect)
+
+**Date:** 2026-08-31
+
+### Symptom
+- Admin Status changes showed in the panel but reset to **pending after a refresh**;
+  bookings / status were never persisted to Google Sheets.
+
+### Root cause (verified live against the deployed Web App)
+- A Google Apps Script `/exec` URL answers a *write* with a **302 redirect** to
+  `script.googleusercontent.com`. A browser/HTTP client following that redirect
+  **drops the POST body**, so the script received an empty payload — it kept
+  generating fresh ids (observed live: a `create` with an explicit `id` returned a
+  *new* auto id) and could never update a status row.
+
+### Fixed
+- **All data is now sent as URL query parameters** (which survive the redirect)
+  instead of a JSON POST body:
+  - `js/booking.js` `syncToSheets()` → `?action=create&id=...&name=...&status=...`
+  - `admin.html` & `electron/admin.html` status change →
+    `?action=updateStatus&id=...&status=...`
+- `js/google-apps-script.js` rewritten: both `doGet` and `doPost` route through a
+  single `handle_()` that reads query parameters (`e.parameter`) as the primary
+  source (JSON body still parsed as a fallback). Actions: `create`, `updateStatus`,
+  or no action → return all bookings (admin refresh).
+
+### Requires
+- Re-deploy a **NEW VERSION** of the Apps Script from `js/google-apps-script.js`
+  (Deploy → Manage deployments → ✏️ → New version → Deploy). The `/exec` URL is
+  unchanged. Without this redeploy the running Web App still has the buggy code.
+
+---
+
 ## v2.14.1 — Admin Status dropdown synced to Google Sheets
 
 **Date:** 2026-08-31

@@ -104,6 +104,6 @@ SHEETS: {
 | Symptom | Fix |
 |---|---|
 | Admin shows "Sync not reachable" | Check the `/exec` URL in `js/config.js`; ensure deployment is a **Web app** with access **Anyone**; re-deploy a new version after edits. |
-| New bookings not appearing in sheet | **Most common cause:** there is no spreadsheet tab named exactly `Bookings` (e.g. still "Sheet1") → the script returned `Sheet 'Bookings' not found`. The current script auto-falls-back to the first tab (or creates one), but you must **re-deploy a new version** of the Apps Script for that fix to take effect. Alternatively, rename the first tab to `Bookings`. Check `Extensions → Apps Script → Executions` for errors. |
+| New bookings not appearing in sheet / status resets to pending on refresh | **Root cause found:** Google Apps Script `/exec` returns a **302 redirect** on writes, and the redirect **drops the POST body** — the script got an empty payload (it kept generating new ids / never updating status). The site now sends data as **URL query parameters**, which survive the redirect. You **must re-deploy a NEW VERSION** of `js/google-apps-script.js` for this fix to take effect (Deploy → Manage deployments → ✏️ → New version → Deploy). |
 | Sheet rows appear but admin shows empty | The admin only merges rows whose `id` is non-empty; ensure the header names match the list in step 1. |
 | Did you edit the Apps Script after deploying? | Editing the script does **not** update the running Web App. You must **Deploy → Manage deployments → ✏️ → New version → Deploy**. The `/exec` URL stays the same. |
