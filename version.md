@@ -7,6 +7,37 @@
 
 ---
 
+## v2.14.1 — Admin Status dropdown synced to Google Sheets
+
+**Date:** 2026-08-31
+
+### Problem
+- Changing the Status dropdown on a booking (Pending / Confirmed / Cancelled)
+  only updated the browser-local copy — **not** the Google Sheet, and not at all
+  for bookings that came from Sheets (remote-only). Status was effectively not
+  persistent/shared.
+
+### Changed
+- `js/google-apps-script.js` — `doPost_` now supports an **`action`** field:
+  - `create` (default) → appends a booking row (unchanged);
+  - `updateStatus` → finds the row by `id` and sets its `status` column
+    (validates the status value; errors if the row or `id`/`status` headers are
+    missing).
+- `admin.html` — `setStatus()` now updates the local copy **and** POSTs
+  `{ action: "updateStatus", id, status }` to the Web App when the booking is
+  remote(Sheets). The in-memory remote list is updated so the UI reflects the
+  change instantly.
+- `electron/admin.html` — `updateStatus()` likewise pushes the status to the
+  Sheet when the booking came from it.
+- All status changes are best-effort: the local UI always updates; the sheet
+  write happens in the background.
+
+### Requires
+- Re-deploying a **new version** of the Apps Script from `js/google-apps-script.js`
+  for the `updateStatus` action to exist on the running Web App.
+
+---
+
 ## v2.14.0 — Google Sheets booking sync (admin never seeing bookings — fixed)
 
 **Date:** 2026-08-31

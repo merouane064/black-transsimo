@@ -143,10 +143,37 @@
     var s = (status || "pending").toLowerCase();
     return '<span class="pill ' + esc(s) + '">' + esc(s) + '</span>';
   }
+  /* Push a status change to the Google Sheet (if configured & the booking is
+     there). Best-effort — resolves silently on failure so the local UI always
+     updates. */
+  function syncStatusToSheets(id, status) {
+    if (!SHEETS || SHEETS.indexOf("/exec") === -1) return Promise.resolve();
+    return fetch(SHEETS, {
+      method: "POST",
+      mode: "cors",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "updateStatus", id: id, status: status })
+    }).then(function () {}, function () {});
+  }
+
   function setStatus(id, status) {
+    status = (status || "pending").toLowerCase();
+
+    /* Update a LOCAL booking (if present in this browser). */
     var list = load();
-    list.forEach(function (b) { if (b.id === id) b.status = status; });
-    save(list);
+    var touched = false;
+    list.forEach(function (b) { if (b.id === id) { b.status = status; touched = true; } });
+    if (touched) save(list);
+
+    /* Update a REMOTE (Sheets) booking in memory, then persist to the sheet. */
+    var remoteTouched = false;
+    remoteList.forEach(function (b) { if (b.id === id) { b.status = status; remoteTouched = true; } });
+
+    /* Always push to the sheet so status stays synchronized, even for a booking
+       not yet in the fetched list (best-effort; harmless "not found" otherwise). */
+    syncStatusToSheets(id, status);
+
     render();
   }
   function remove(id) {

@@ -10,9 +10,13 @@
  *
  * WHAT IT DOES
  * ------------
- *  • POST (doPost):  appends a new booking to the sheet's "Bookings" tab.
- *  • GET  (doGet):   returns ALL bookings as JSON so the admin panel can
- *                    display them (cross-origin CORS enabled).
+ *  • POST (doPost):   appends a new booking to the sheet's "Bookings" tab
+ *                     (action "create", the default).
+ *  • POST (doPost):   updates an existing booking's status by id
+ *                     (action "updateStatus" + { id, status }) — used so the
+ *                     admin's Status dropdown stays synced with the sheet.
+ *  • GET  (doGet):    returns ALL bookings as JSON so the admin panel can
+ *                     display them (cross-origin CORS enabled).
  *
  * SETUP (5 minutes) — see google-apps-script-setup.md for the full walkthrough.
  * ===============
@@ -93,23 +97,57 @@ function doPost_(e) {
       }
     }
 
-    var booking = {};
-    HEADERS.forEach(function (k) {
-      var v = data[k];
-      booking[k] = (v === undefined || v === null) ? "" : String(v);
-    });
-    if (!booking.id || !booking.created) {
-      booking.id = "BK" + Date.now();
-      booking.created = new Date().toISOString();
+    var action = data.action || "create";
+    if (action === "updateStatus") {
+      return updateStatus_(sheet, data);
     }
-    if (!booking.status) booking.status = "pending";
-
-    sheet.appendRow(HEADERS.map(function (k) { return booking[k]; }));
-
-    return json_({ ok: true, id: booking.id });
+    return create_(sheet, data);
   } catch (err) {
     return json_({ ok: false, error: String(err) });
   }
+}
+
+/* Append a new booking row. */
+function create_(sheet, data) {
+  var booking = {};
+  HEADERS.forEach(function (k) {
+    var v = data[k];
+    booking[k] = (v === undefined || v === null) ? "" : String(v);
+  });
+  if (!booking.id || !booking.created) {
+    booking.id = "BK" + Date.now();
+    booking.created = new Date().toISOString();
+  }
+  if (!booking.status) booking.status = "pending";
+
+  sheet.appendRow(HEADERS.map(function (k) { return booking[k]; }));
+
+  return json_({ ok: true, id: booking.id });
+}
+
+/* Update the status of an existing booking row, matched by id. */
+function updateStatus_(sheet, data) {
+  if (!data.id) throw new Error("Missing id for status update.");
+  var status = String(data.status || "").toLowerCase();
+  if (["pending", "confirmed", "cancelled"].indexOf(status) === -1) {
+    throw new Error("Invalid status: " + data.status);
+  }
+
+  var header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var idCol = header.map(String).indexOf("id");          // 0-based col index
+  var statusCol = header.map(String).indexOf("status");  // 0-based col index
+  if (idCol === -1 || statusCol === -1) {
+    throw new Error("Sheet is missing 'id' or 'status' header columns.");
+  }
+
+  var rows = sheet.getDataRange().getValues();
+  for (var r = 1; r < rows.length; r++) {
+    if (String(rows[r][idCol] || "").trim() === String(data.id).trim()) {
+      sheet.getRange(r + 1, statusCol + 1).setValue(status);
+      return json_({ ok: true, id: data.id, status: status });
+    }
+  }
+  throw new Error("Booking id not found in sheet: " + data.id);
 }
 
 /* doGet / doPost wrappers so the file maps cleanly to Deployment types. */

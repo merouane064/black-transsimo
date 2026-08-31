@@ -183,8 +183,23 @@ function fetchRemote() {
 function updateStatus(id, value) {
   var i = state.findIndex(function (b) { return b.id === id; });
   if (i === -1) return;
+  value = (value || "pending").toLowerCase();
   state[i].status = value;
-  state = window.bookings.save(state[i]);
+
+  /* Persist to local Electron store, then push to Google Sheets so the two
+     stay synchronized. Best-effort on the sheet side. */
+  if (window.bookings && window.bookings.save) {
+    state = window.bookings.save(state[i]);
+  }
+  if (SHEETS && SHEETS.indexOf("/exec") !== -1) {
+    fetch(SHEETS, {
+      method: "POST",
+      mode: "cors",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "updateStatus", id: id, status: value })
+    }).catch(function () { });
+  }
   render();
 }
 

@@ -67,6 +67,16 @@ SHEETS: {
 - **Admin panel (`admin.html`)** → fetches all bookings from the Web App and
   merges them with the local ones, so a booking made by any visitor anywhere is
   visible to the owner on the device that opens the admin page.
+- **Status dropdown stays synchronized** → when the admin changes a booking's
+  Status (Pending / Confirmed / Cancelled), `admin.html` updates the local copy
+  **and** POSTs `{ action: "updateStatus", id, status }` to the Web App, which
+  writes the new status back to the matching row in the Sheet. The same applies
+  to the Electron admin. (Best-effort: the local UI updates immediately even if
+  the network/Web App is briefly unavailable.)
+
+> ⚠️ **Any time the Apps Script is edited, you must deploy a NEW VERSION** for the
+> change to take effect (Deploy → Manage deployments → ✏️ → New version → Deploy).
+> The `/exec` URL itself stays the same.
 
 ---
 
