@@ -153,10 +153,8 @@ function create_(sheet, data) {
 /* Update the status of an existing booking row, matched by id. */
 function updateStatus_(sheet, data) {
   if (!data.id) throw new Error("Missing id for status update.");
-  var status = String(data.status || "").toLowerCase();
-  if (["pending", "confirmed", "cancelled"].indexOf(status) === -1) {
-    throw new Error("Invalid status: " + data.status);
-  }
+  var status = normalizeStatus_(String(data.status || ""));
+  if (!status) throw new Error("Invalid status: " + data.status);
 
   var header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var idCol = header.map(String).indexOf("id");          // 0-based col index
@@ -173,6 +171,16 @@ function updateStatus_(sheet, data) {
     }
   }
   throw new Error("Booking id not found in sheet: " + data.id);
+}
+
+/* Normalize a status to one of the three canonical lowercase values. Unknown
+   values return null (caller rejects them). Known spelling variants (e.g.
+   "Canceled") are folded to the canonical form for robustness. */
+function normalizeStatus_(value) {
+  var s = String(value || "").toLowerCase().trim();
+  if (s === "pending" || s === "confirmed") return s;
+  if (s === "cancelled" || s === "canceled") return "cancelled";
+  return null;
 }
 
 /* doGet / doPost wrappers so the file maps cleanly to Deployment types. */

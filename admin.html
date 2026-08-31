@@ -32,6 +32,33 @@
   .btn-mini{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:.72rem;cursor:pointer}
   .btn-mini:hover{color:#fff;border-color:#fff}
   a{color:var(--gold-light)}
+
+  /* ---------- Status editor (radio + save) ---------- */
+  .status-editor{display:flex;flex-direction:column;gap:8px;min-width:150px}
+  .status-radios{display:flex;flex-direction:column;gap:4px}
+  .status-radios label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.78rem;color:var(--muted);padding:2px 4px;border-radius:6px;user-select:none}
+  .status-radios label:hover{background:rgba(201,162,39,.08)}
+  .status-radios input{position:absolute;opacity:0;width:0;height:0}
+  .status-radios .dot{width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.28);flex:0 0 auto;position:relative;transition:border-color .15s, box-shadow .15s}
+  .status-radios label:hover .dot{border-color:var(--gold-light)}
+  .status-radios input:focus-visible + .dot{outline:2px solid var(--gold);outline-offset:2px}
+  .status-radios input:disabled + .dot{opacity:.45;cursor:not-allowed}
+  .status-radios label span{text-transform:capitalize}
+  .status-radios label.pending.sel .dot{border-color:var(--gold-light)}
+  .status-radios label.pending.sel .dot::after{content:"";position:absolute;inset:2px;border-radius:50%;background:var(--gold-light)}
+  .status-radios label.confirmed.sel .dot{border-color:#7fe0a8}
+  .status-radios label.confirmed.sel .dot::after{content:"";position:absolute;inset:2px;border-radius:50%;background:#7fe0a8}
+  .status-radios label.cancelled.sel .dot{border-color:#ff8a7a}
+  .status-radios label.cancelled.sel .dot::after{content:"";position:absolute;inset:2px;border-radius:50%;background:#ff8a7a}
+  .status-radios label.sel span{color:var(--ivory);font-weight:600}
+  .save-status{background:var(--gold);color:#14100a;border:0;border-radius:7px;padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;align-self:flex-start}
+  .save-status:hover:not(:disabled){background:var(--gold-light)}
+  .save-status:disabled{opacity:.5;cursor:not-allowed}
+  .save-status.dirty{box-shadow:0 0 0 1px var(--gold), 0 0 10px rgba(201,162,39,.35)}
+  .save-feedback{font-size:.72rem;font-weight:600;min-height:1em;line-height:1.3}
+  .save-feedback.saving{color:var(--muted)}
+  .save-feedback.ok{color:#7fe0a8}
+  .save-feedback.err{color:#ff8a7a}
   @media(max-width:900px){.wrap{overflow-x:auto}table{min-width:1100px}}
   .lock-wrap{position:fixed;inset:0;background:var(--black);display:flex;align-items:center;justify-content:center;z-index:100}
   .lock-wrap.hidden{display:none}
@@ -143,35 +170,35 @@
     var s = (status || "pending").toLowerCase();
     return '<span class="pill ' + esc(s) + '">' + esc(s) + '</span>';
   }
-  /* Push a status change to the Google Sheet (if configured). Best-effort —
-     resolves silently on failure so the local UI always updates. Sent as URL
-     query parameters: Google's /exec redirect drops a POST body, but query
+  /* Send a status change to the Google Sheet (the source of truth). Unlike the
+     old best-effort version, errors are NOT swallowed: the caller uses the
+     returned promise to update the UI accordingly. Data is sent as URL query
+     parameters — Google's /exec redirect drops a POST body, but query
      parameters survive the redirect. */
   function syncStatusToSheets(id, status) {
-    if (!SHEETS || SHEETS.indexOf("/exec") === -1) return Promise.resolve();
+    if (!SHEETS || SHEETS.indexOf("/exec") === -1) {
+      return Promise.reject(new Error("Sheets sync not configured."));
+    }
     return fetch(SHEETS + "?action=updateStatus&id=" + encodeURIComponent(id) +
       "&status=" + encodeURIComponent(status), { method: "GET" })
-      .then(function () {}, function () {});
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (!res || res.ok !== true) {
+          throw new Error((res && res.error) || "Unknown sync error.");
+        }
+        return res;
+      });
   }
 
-  function setStatus(id, status) {
-    status = (status || "pending").toLowerCase();
+  /* Statuses the admin has selected but not yet saved, keyed by booking id.
+     A "draft" is only written to Google Sheets when the admin confirms. */
+  var draftStatuses = {};
+  var saving = false;            // guard against concurrent save requests
+  var VALID_STATUSES = ["pending", "confirmed", "cancelled"];
 
-    /* Update a LOCAL booking (if present in this browser). */
-    var list = load();
-    var touched = false;
-    list.forEach(function (b) { if (b.id === id) { b.status = status; touched = true; } });
-    if (touched) save(list);
-
-    /* Update a REMOTE (Sheets) booking in memory, then persist to the sheet. */
-    var remoteTouched = false;
-    remoteList.forEach(function (b) { if (b.id === id) { b.status = status; remoteTouched = true; } });
-
-    /* Always push to the sheet so status stays synchronized, even for a booking
-       not yet in the fetched list (best-effort; harmless "not found" otherwise). */
-    syncStatusToSheets(id, status);
-
-    render();
+  function normalized(s) {
+    s = String(s == null ? "pending" : s).toLowerCase();
+    return VALID_STATUSES.indexOf(s) === -1 ? "pending" : s;
   }
   function remove(id) {
     if (!confirm("Delete this booking?")) return;
@@ -206,18 +233,28 @@
       });
   }
 
-  /* Merge remote sheet bookings with local ones, deduped by id (local wins on
-     status changes; remote fills in anything the visitor's browser saved). */
+  /* Merge remote sheet bookings with local ones, deduped by id. Google Sheets
+     is the source of truth: for a booking present in BOTH, the remote status
+     wins (local data only fills in bookings the visitor's browser saved that
+     Sheets doesn't know about). */
   function mergedList() {
     var local = load();
-    var seen = {};
-    local.forEach(function (b) { if (b && b.id) seen[b.id] = true; });
-    var extra = remoteList.filter(function (b) {
-      if (seen[b.id]) return false;
-      seen[b.id] = true;
-      return true;
+    var byId = {};
+    local.forEach(function (b) { if (b && b.id) byId[b.id] = b; });
+    remoteList.forEach(function (b) {
+      if (!b || !b.id) return;
+      var localB = byId[b.id];
+      if (localB) {
+        /* Prefer the remote status/sheet value; keep local fields as fallbacks. */
+        localB.status = normalized(b.status);
+        byId[b.id] = localB;
+      } else {
+        byId[b.id] = b;
+      }
     });
-    return local.concat(extra);
+    var out = [];
+    for (var k in byId) if (byId.hasOwnProperty(k)) out.push(byId[k]);
+    return out;
   }
 
   function render() {
@@ -264,16 +301,111 @@
         '<td>' + dash(b.destination) + '</td>' +
         '<td class="msg">' + dash(b.message) + '</td>' +
         '<td>' + pill(b.status) + '</td>' +
-        '<td>' +
-          '<select class="btn-mini" onchange="window.__setStatus(\'' + esc(b.id) + '\', this.value)">' +
-            '<option value="pending"' + (b.status === "pending" ? " selected" : "") + '>pending</option>' +
-            '<option value="confirmed"' + (b.status === "confirmed" ? " selected" : "") + '>confirmed</option>' +
-            '<option value="cancelled"' + (b.status === "cancelled" ? " selected" : "") + '>cancelled</option>' +
-          '</select> ' +
-          '<button class="btn-mini" onclick="window.__remove(\'' + esc(b.id) + '\')">Delete</button>' +
-        '</td>' +
+        '<td>' + statusCell(b) + '</td>' +
       '</tr>';
     }).join("");
+  }
+
+  /* Build the radio + "Save status" status editor for a row. The officially
+     saved status (from Google Sheets) is what's checked, unless the admin has
+     selected a draft that hasn't been saved yet. */
+  function statusCell(b) {
+    var id = b.id || "";
+    var official = normalized(b.status);
+    var selected = draftStatuses.hasOwnProperty(id) ? draftStatuses[id] : official;
+    var name = "st_" + id;
+    var opts = VALID_STATUSES.map(function (s) {
+      var checked = (s === selected) ? " checked" : "";
+      var selClass = (s === selected) ? " sel" : "";
+      return '<label class="' + s + selClass + '">' +
+        '<input type="radio" name="' + esc(name) + '" value="' + s + '"' + checked +
+        ' onchange="window.__selectStatus(' + JSON.stringify(id) + ', \'' + s + '\')">' +
+        '<span class="dot"></span><span>' + s + '</span></label>';
+    }).join("");
+    var dirty = draftStatuses.hasOwnProperty(id);
+    var btn = saving
+      ? '<button class="save-status" disabled>Save status</button>'
+      : '<button class="save-status' + (dirty ? " dirty" : "") + '" ' +
+        'onclick="window.__saveStatus(' + JSON.stringify(id) + ')">Save status</button>';
+    var fb = '<span class="save-feedback' + (feedbackClass(id) ? " " + feedbackClass(id) : "") + '" id="fb_' + esc(id) + '">' + feedbackText(id) + '</span>';
+    return '<div class="status-editor" data-id="' + esc(id) + '">' +
+      '<div class="status-radios">' + opts + '</div>' +
+      btn + fb +
+      (dirty ? '<button class="btn-mini" onclick="window.__discardStatus(' + JSON.stringify(id) + ')">Reset</button>' : '') +
+    '</div>' +
+    '<button class="btn-mini" onclick="window.__remove(' + JSON.stringify(id) + ')">Delete</button>';
+  }
+
+  /* Radio selection — only records a draft for this row. Does NOT touch
+     Google Sheets; nothing is written until "Save status" is clicked. */
+  function selectStatus(id, status) {
+    if (saving) return;
+    draftStatuses[id] = normalized(status);
+    delete feedbackMap[id];
+    render();
+  }
+
+  var feedbackMap = {};   // id -> {text, cls}; survives re-renders
+  function feedbackText(id) {
+    var f = feedbackMap[id];
+    return f ? f.text : "";
+  }
+  function feedbackClass(id) {
+    var f = feedbackMap[id];
+    return f ? f.cls : "";
+  }
+
+  function setFeedback(id, msg, cls) {
+    var el = document.getElementById("fb_" + id);
+    if (msg) {
+      feedbackMap[id] = { text: msg, cls: cls || "" };
+    } else {
+      delete feedbackMap[id];
+    }
+    if (el) {
+      el.textContent = msg;
+      el.className = "save-feedback" + (cls ? " " + cls : "");
+    }
+  }
+
+  /* Persist the selected status to Google Sheets (the source of truth),
+     then re-fetch so the UI reflects the real remote data. On failure the
+     draft is kept and the official status stays unchanged so it can be retried. */
+  function saveStatus(id) {
+    if (saving) return;
+    if (draftStatuses.hasOwnProperty(id) === false) {
+      setFeedback(id, "", "");
+      return;
+    }
+    var target = draftStatuses[id];
+    saving = true;
+    setFeedback(id, "Saving...", "saving");
+    render();
+
+    syncStatusToSheets(id, target).then(function () {
+      /* Persist the confirmed status locally too, so a same-browser reload
+         reflects it even before the remote refresh completes. */
+      var list = load();
+      list.forEach(function (b) { if (b.id === id) b.status = target; });
+      save(list);
+      delete draftStatuses[id];
+      saving = false;
+      setFeedback(id, "\u2713 Status synchronized", "ok");
+      render();
+      setTimeout(function () { delete feedbackMap[id]; var el = document.getElementById("fb_" + id); if (el) el.textContent = ""; }, 3000);
+      return fetchRemote();   /* re-fetch so the UI matches Google Sheets */
+    }, function (err) {
+      saving = false;
+      setFeedback(id, "\u26A0 Synchronization failed", "err");
+      render();
+      /* Keep the official status unchanged; allow retry. Show a clear error. */
+      return Promise.reject(err);
+    });
+  }
+
+  function discardStatus(id) {
+    delete draftStatuses[id];
+    render();
   }
 
   function exportCSV() {
@@ -296,7 +428,9 @@
     document.body.removeChild(a);
   }
 
-  window.__setStatus = setStatus;
+  window.__selectStatus = selectStatus;
+  window.__saveStatus = saveStatus;
+  window.__discardStatus = discardStatus;
   window.__remove = remove;
   document.getElementById("search").addEventListener("input", render);
   document.getElementById("statusFilter").addEventListener("change", render);
