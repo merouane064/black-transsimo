@@ -22,9 +22,15 @@
  *        id | created | status | name | phone | email | passengers | date |
  *        time | returnDate | returnTime | vehicle | service | pickup |
  *        destination | message
+ *      (Not required: if no tab is named "Bookings", the script auto-uses the
+ *       first tab, or creates one if the spreadsheet is empty.)
  *  4. Deploy → New deployment → Web app → Execute as: Me →
  *        Who has access: Anyone  → Deploy → copy the /exec Web App URL.
  *  5. Paste that URL into js/config.js as  SHEETS.endpoint.
+ *
+ *  IMPORTANT after editing this file: re-deploy a NEW VERSION
+ *  (Deploy → Manage deployments → ✏️ → New version), otherwise the old code
+ *  keeps running.
  *
  ******************************************************************************/
 
@@ -36,10 +42,23 @@ var HEADERS = [
   "pickup", "destination", "message"
 ];
 
+/* Resolve the sheet to write/read. Prefers the tab named exactly "Bookings",
+   but falls back to the first tab (and creates one if the spreadsheet is empty)
+   so a setup that didn't rename the tab still works. */
+function getSheet_() {
+  var book = SpreadsheetApp.getActiveSpreadsheet();
+  var main = book.getSheetByName(SHEET_NAME);
+  if (main) return main;
+  var sheets = book.getSheets();
+  if (sheets.length) return sheets[0];
+  var created = book.insertSheet(SHEET_NAME);
+  created.appendRow(HEADERS);
+  return created;
+}
+
 function doGet_(e) {
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-    if (!sheet) throw new Error("Sheet '" + SHEET_NAME + "' not found.");
+    var sheet = getSheet_();
 
     var rows = sheet.getDataRange().getValues();
     if (rows.length === 0) {
@@ -63,8 +82,7 @@ function doGet_(e) {
 
 function doPost_(e) {
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-    if (!sheet) throw new Error("Sheet '" + SHEET_NAME + "' not found.");
+    var sheet = getSheet_();
 
     var data = {};
     if (e && e.postData && e.postData.contents) {
