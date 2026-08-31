@@ -97,7 +97,7 @@ function handle_(data) {
          arrived, so a redeploy can be verified. */
       return json_({
         ok: true,
-        version: "2.14.4",
+        version: "2.15.0",
         note: "ping received",
         actionSeen: action,
         params: data
@@ -157,8 +157,13 @@ function updateStatus_(sheet, data) {
   if (!status) throw new Error("Invalid status: " + data.status);
 
   var header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var idCol = header.map(String).indexOf("id");          // 0-based col index
-  var statusCol = header.map(String).indexOf("status");  // 0-based col index
+  /* Trim header cells - they may carry leading/trailing whitespace entered by
+     hand in the spreadsheet, and list_() relies on trim too. Without trimming
+     here, the id/status column lookups below would fail and this update would
+     be incorrectly reported as "missing headers". */
+  var headerNorm = header.map(String).map(function (h) { return String(h).trim(); });
+  var idCol = headerNorm.indexOf("id");          // 0-based col index
+  var statusCol = headerNorm.indexOf("status");  // 0-based col index
   if (idCol === -1 || statusCol === -1) {
     throw new Error("Sheet is missing 'id' or 'status' header columns.");
   }
