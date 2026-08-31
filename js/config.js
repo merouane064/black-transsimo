@@ -55,6 +55,6 @@ window.MAR1_CONFIG = {
      panel reads them back, so reservations survive the visitor's browser.
      Leave empty ("") to disable sync — emails + local storage still work.   */
   SHEETS: {
-    endpoint: "https://script.google.com/macros/s/AKfycbxa2TorslfeV596aDOabuqzOMFwyyL8jCa13IGoaiA48rWxKfvun8WkIuhW4ccb_PI/exec"
+    endpoint: "https://script.google.com/macros/s/AKfycbz-xOWjjXqpAtzP208g5KkXIsTFEueaIx3jn-8LCPdFEzL3PlRurZaAkqeHk2lNbwoS/exec"
   }
 };
