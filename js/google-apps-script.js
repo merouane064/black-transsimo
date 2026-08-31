@@ -1,5 +1,5 @@
 /*******************************************************************************
- * BLACK TRANSSIMO — Google Sheets Booking Sync (Apps Script Web App)
+ * BLACK TRANSSIMO - Google Sheets Booking Sync (Apps Script Web App)
  * ====================================================================
  * WHY THIS EXISTS
  * --------------
@@ -8,40 +8,40 @@
  * so they never appeared in the owner's admin panel. This Apps Script Web App
  * gives bookings a shared, always-visible home: a Google Sheet.
  *
- * WHAT IT DOES  (all requests carry their data as **query parameters** — see
+ * WHAT IT DOES  (all requests carry their data as **query parameters** - see
  * "IMPORTANT" below for why)
  * ----------------s
- *  • admin refresh            → GET /          → returns ALL bookings as JSON
- *  • new booking / send       → GET ?action=create&id=...&name=...&status=...
- *                                             → appends a row
- *  • admin Status dropdown    → GET ?action=updateStatus&id=...&status=...
- *                                             → updates the status column by id
+ *  - admin refresh            -> GET /          -> returns ALL bookings as JSON
+ *  - new booking / send       -> GET ?action=create&id=...&name=...&status=...
+ *                                             -> appends a row
+ *  - admin Status dropdown    -> GET ?action=updateStatus&id=...&status=...
+ *                                             -> updates the status column by id
  *
- * SETUP (5 minutes) — see google-apps-script-setup.md for the full walkthrough.
+ * SETUP (5 minutes) - see google-apps-script-setup.md for the full walkthrough.
  * ===============
- *  1. sheets.new  → create a blank Google Sheet.
- *  2. Extensions → Apps Script → paste this whole file.
+ *  1. sheets.new  -> create a blank Google Sheet.
+ *  2. Extensions -> Apps Script -> paste this whole file.
  *  3. On the first tab, name it  Bookings  and add a header row:
  *        id | created | status | name | phone | email | passengers | date |
  *        time | returnDate | returnTime | vehicle | service | pickup |
  *        destination | message
  *      (Not required: if no tab is named "Bookings", the script auto-uses the
  *       first tab, or creates one if the spreadsheet is empty.)
- *  4. Deploy → New deployment → Web app → Execute as: Me →
- *        Who has access: Anyone  → Deploy → copy the /exec Web App URL.
+ *  4. Deploy -> New deployment -> Web app -> Execute as: Me ->
+ *        Who has access: Anyone  -> Deploy -> copy the /exec Web App URL.
  *  5. Paste that URL into js/config.js as  SHEETS.endpoint.
  *
  *  IMPORTANT (why query parameters, not a request body):
  *  ----------
  *  A Web App /exec URL answers a write request with a **302 redirect** to
  *  script.googleusercontent.com. A browser (and most HTTP clients) following
- *  that redirect drops the POST body — the script then receives an empty
+ *  that redirect drops the POST body - the script then receives an empty
  *  payload and would generate a brand-new id / do nothing. Data placed in the
  *  URL query string survives the redirect untouched, so that's what the site
  *  sends. The JSON request body is still parsed as a fallback.
  *
  *  ALSO IMPORTANT: after editing THIS file you must re-deploy a NEW VERSION
- *  (Deploy → Manage deployments → ✏️ → New version → Deploy) for the running
+  *  (Deploy -> Manage deployments -> New version -> Deploy) for the running
  *  Web App to pick it up. The /exec URL itself stays unchanged.
  *
  ******************************************************************************/
@@ -69,7 +69,7 @@ function params_(e) {
       for (var k2 in body) {
         if (Object.prototype.hasOwnProperty.call(body, k2)) p[k2] = body[k2];
       }
-    } catch (err) { /* ignore malformed body — query params may still be set */ }
+    } catch (err) { /* ignore malformed body - query params may still be set */ }
   }
   return p;
 }
@@ -115,7 +115,7 @@ function handle_(data) {
   }
 }
 
-/* Return every booking (newest first) — used by the admin panel. */
+/* Return every booking (newest first) - used by the admin panel. */
 function list_(sheet) {
   var rows = sheet.getDataRange().getValues();
   if (rows.length === 0) return json_({ ok: true, bookings: [] });
