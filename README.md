@@ -56,7 +56,7 @@ statuses aligned (`declined` → `cancelled`).
 | Low-resolution activity photos | ⚠️ Needs Attention (2 files soft) |
 | Email notifications (EmailJS) | 🟢 Completed (v2.10.0 — configured & end-to-end tested) |
 | EmailJS booking email template | 🟢 Model ready (v2.13.0/1 — paste `emailjs-template.html`; **To Email = `{{to_email}}`**) |
-| Google Sheets / Excel sync | 🔴 Not Started |
+| Google Sheets booking sync | 🟡 Code ready (v2.14.0 — Apps Script + admin merge; live once `SHEETS.endpoint` is set — see `google-apps-script-setup.md`) |
 | Payment system | 🔴 Not Started |
 | Production deployment / domain | 🔴 Not Started |
 
@@ -104,7 +104,9 @@ booking form and WhatsApp/email contact. Fully static — hostable anywhere, zer
 
 ## Features Not Yet Started
 
-- Google Sheets / Excel booking integration (no code exists).
+- Google Sheets / Excel booking integration (code ready in v2.14.0 but NOT yet
+  deployed — requires creating the Sheet + Apps Script Web App and setting
+  `SHEETS.endpoint` in `js/config.js`; see `google-apps-script-setup.md`).
 - Payment system (booking form takes no payment).
 - Production deployment + replacing the placeholder domain `www.mar1travel.com`
   (sitemap.xml, robots.txt, canonical/JSON-LD).
@@ -135,6 +137,7 @@ booking form and WhatsApp/email contact. Fully static — hostable anywhere, zer
 
 | Date | File / Section | Change |
 |---|---|---|
+| 2026-08-31 | `js/google-apps-script.js`, `google-apps-script-setup.md`, `js/config.js`, `js/booking.js`, `admin.html`, `electron/admin.html` | v2.14.0 Google Sheets booking sync: Apps Script Web App (POST append + GET JSON), site pushes each booking to it, both admins fetch + merge with local. Fixes bookings only ever existing in the visitor's browser `localStorage` (email was sent, admin stayed empty). Not live until `SHEETS.endpoint` is set (see setup doc). |
 | 2026-08-31 | `emailjs-template.html` | v2.13.1 EmailJS recipient fix: **To Email must be `{{to_email}}`** — empty/fixed field sends both copies to the owner and nothing to the client (documented) |
 | 2026-08-31 | `emailjs-template.html`, `js/config.js` | v2.13.0 EmailJS template model: ready-to-paste booking email template adapted to the form (16 params, styled body, {{to_email}}/{{reply_to}}) |
 | 2026-08-30 | `favicon-*.png`, `apple-touch-icon.png`, `index.html` header, `favicon.svg` | v2.12.0 favicon: PNG set from `logo.jpg` replaces old “M1” SVG (deleted) |
@@ -227,6 +230,7 @@ before being referenced in the HTML.
 | System | Status | Notes |
 |---|---|---|
 | **Booking system** | 🟢 Working | Validates fields/dates, saves every request to `localStorage["mar1_bookings"]`, pre-fills via `data-book`. Works fully offline. |
+| **Google Sheets sync** | 🟡 Code ready, not deployed (v2.14.0) | `js/booking.js` POSTs each booking to a Google Apps Script Web App; both admins read back and merge. Requires one-time setup (`google-apps-script-setup.md`) + `SHEETS.endpoint` in `js/config.js`. Fixes bookings never reaching the owner's admin (they were only ever in the visitor's browser `localStorage`). |
 | **Contact / WhatsApp** | 🟢 Live | Every WhatsApp link derives from `WHATSAPP_NUMBER` in `js/config.js`; messages pre-branded “BLACK TRANSSIMO”. |
 | **Email integration** | 🟢 Configured & tested | Real EmailJS credentials in `js/config.js`; end-to-end delivery verified to `NEW_BOOKING_EMAIL` (v2.10.0). |
 | **Payment system** | 🔴 Not started | None. Bookings are requests only; pricing handled privately. |
@@ -275,6 +279,7 @@ before being referenced in the HTML.
 | `WEBSITE_URL` | Canonical URL (placeholder `www.mar1travel.com`). |
 | `EMAILJS.*` | Configured (v2.10.0): Service/Template/Public Key set — emails active. Strict mode is off on the account (the browser SDK cannot sign strict-mode requests). |
 | `ADMIN_PASSWORD_HASH` | SHA-256 (hex) of the admin password (v2.11.0). Generate with: `node -e "console.log(require('crypto').createHash('sha256').update('PASSWORD').digest('hex'))"`. Never store the plaintext. |
+| `SHEETS.endpoint` | Google Apps Script Web App `/exec` URL (v2.14.0). When set, bookings are pushed to a Google Sheet and both admins read them back. Setup: `google-apps-script-setup.md`. |
 
 **EmailJS (configured — v2.10.0):** account wired with Service ID `service_eegyqme`,
 Template ID `template_dux6pid` and the account Public Key in `js/config.js`. The template
@@ -297,7 +302,12 @@ protect the account instead via the dashboard’s **authorized domains** list.
 3. ✅ EmailJS configured and tested end-to-end (v2.10.0) — optionally re-test from the live form.
 4. Optionally supply HD replacements for `buggy.jpg` and `trekking.jpg`.
 5. Run `cd electron && npm start` (launch verified) → package installers with `electron-builder`.
-6. Deploy; then update the domain in `sitemap.xml`, `robots.txt`, canonical/JSON-LD.
+6. ✅ Code written (v2.14.0) — Google Sheets booking sync. To activate: follow
+   `google-apps-script-setup.md` (create Sheet + Apps Script Web App, paste
+   `js/google-apps-script.js`) and set `SHEETS.endpoint` in `js/config.js`. This makes
+   every booking (not just the ones made on the owner's own browser) appear in the
+   admin panel.
+7. Deploy; then update the domain in `sitemap.xml`, `robots.txt`, canonical/JSON-LD.
 
 ---
 

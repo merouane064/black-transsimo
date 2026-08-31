@@ -100,7 +100,6 @@ window.BOOKING = (function () {
       return Promise.resolve("unconfigured");
     }
     emailjs.init(pk);
-
     var base = {
       from_name: b.name,
       from_phone: b.phone,
@@ -140,6 +139,41 @@ window.BOOKING = (function () {
     );
   }
 
+  /* Best-effort push of a booking to the Google Sheets Web App (configured via
+     CFG.SHEETS.endpoint). Never blocks the user flow: resolves quietly whether
+     it succeeded or not. */
+  function syncToSheets(booking) {
+    var endpoint = (CFG.SHEETS && CFG.SHEETS.endpoint) || "";
+    if (!endpoint || endpoint.indexOf("/exec") === -1) {
+      return Promise.resolve();
+    }
+    var payload = {
+      id: booking.id,
+      created: booking.created,
+      status: booking.status,
+      name: booking.name,
+      phone: booking.phone,
+      email: booking.email || "",
+      passengers: booking.passengers,
+      date: booking.date,
+      time: booking.time || "",
+      returnDate: booking.returnDate || "",
+      returnTime: booking.returnTime || "",
+      vehicle: booking.vehicle || "",
+      service: booking.service,
+      pickup: booking.pickup,
+      destination: booking.destination,
+      message: booking.message || ""
+    };
+    return fetch(endpoint, {
+      method: "POST",
+      mode: "cors",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    }).then(function () {}, function () {});
+  }
+
   function handleSubmit(ev) {
     ev.preventDefault();
     var b = readForm();
@@ -165,6 +199,7 @@ window.BOOKING = (function () {
         return;
       }
       saveLocal(b);
+      syncToSheets(b);
       document.getElementById("bookingForm").reset();
       document.getElementById("bPassengers").value = "2";
       setStatus("", false);

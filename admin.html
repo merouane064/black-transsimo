@@ -59,7 +59,7 @@
   </div>
 
   <h1>BLACK <span class="dot">TRANSSIMO</span> - Bookings</h1>
-  <p class="sub">All booking requests are stored in this browser (localStorage). Open this page on the same device used to receive bookings.</p>
+  <p class="sub">Bookings from the website are pushed to a Google Sheet (see the sync status below) and merged with any stored in this browser.</p>
 
   <div class="stats">
     <span>Total: <b id="statTotal">0</b></span>
@@ -67,6 +67,7 @@
     <span>Confirmed: <b id="statConfirmed">0</b></span>
     <span>Today: <b id="statToday">0</b></span>
   </div>
+  <p class="sub" id="sheetsNote" style="margin-bottom:12px;margin-top:-8px"></p>
 
   <div class="toolbar">
     <input type="text" id="search" placeholder="Search name, phone, destination...">
@@ -111,6 +112,9 @@
 <script>
 (function () {
   var KEY = "mar1_bookings";
+  var SHEETS =
+    (window.MAR1_CONFIG && window.MAR1_CONFIG.SHEETS && window.MAR1_CONFIG.SHEETS.endpoint) || "";
+
   function load() {
     try { return JSON.parse(localStorage.getItem(KEY)) || []; }
     catch (e) { return []; }
@@ -151,8 +155,49 @@
     render();
   }
 
+  /* Remote (Google Sheets) bookings, fetched from CFG.SHEETS.endpoint. */
+  var remoteList = [];
+  function fetchRemote() {
+    if (!SHEETS || SHEETS.indexOf("/exec") === -1) {
+      document.getElementById("sheetsNote").textContent =
+        "Sheets sync not configured (set SHEETS.endpoint in js/config.js).";
+      return;
+    }
+    fetch(SHEETS)
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res && res.ok && Array.isArray(res.bookings)) {
+          remoteList = res.bookings.filter(function (b) { return b && b.id; });
+          document.getElementById("sheetsNote").textContent =
+            "Synced with Google Sheets (" + remoteList.length + " cloud bookings on " + new Date().toLocaleString() + ").";
+        } else {
+          document.getElementById("sheetsNote").textContent =
+            "Sheets sync: response not OK (" + ((res && res.error) || "unknown") + ").";
+        }
+        render();
+      })
+      .catch(function () {
+        document.getElementById("sheetsNote").textContent =
+          "Sheets sync unreachable — showing local bookings only.";
+      });
+  }
+
+  /* Merge remote sheet bookings with local ones, deduped by id (local wins on
+     status changes; remote fills in anything the visitor's browser saved). */
+  function mergedList() {
+    var local = load();
+    var seen = {};
+    local.forEach(function (b) { if (b && b.id) seen[b.id] = true; });
+    var extra = remoteList.filter(function (b) {
+      if (seen[b.id]) return false;
+      seen[b.id] = true;
+      return true;
+    });
+    return local.concat(extra);
+  }
+
   function render() {
-    var list = load();
+    var list = mergedList();
     var q = (document.getElementById("search").value || "").toLowerCase().trim();
     var st = document.getElementById("statusFilter").value;
     var today = todayStr();
@@ -256,6 +301,7 @@
     lock.classList.add("hidden");
     lockBtn.textContent = "Lock";
     render();
+    fetchRemote();
   }
   function showLock(msg) {
     sessionStorage.removeItem(SESSION_KEY);

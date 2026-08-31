@@ -47,5 +47,14 @@ window.MAR1_CONFIG = {
     SERVICE_ID: "service_eegyqme",
     TEMPLATE_ID: "template_dux6pid",
     PUBLIC_KEY: "m3SixP2dMU52uEe_Y"
+  },
+
+  /* ---------- GOOGLE SHEETS SYNC (see google-apps-script-setup.md) ---------- */
+  /* Paste the Apps Script Web App /exec URL here (deployed from
+     js/google-apps-script.js). Bookings are POSTed here on submit, and the admin
+     panel reads them back, so reservations survive the visitor's browser.
+     Leave empty ("") to disable sync — emails + local storage still work.   */
+  SHEETS: {
+    endpoint: "https://script.google.com/macros/s/AKfycbxa2TorslfeV596aDOabuqzOMFwyyL8jCa13IGoaiA48rWxKfvun8WkIuhW4ccb_PI/exec"
   }
 };

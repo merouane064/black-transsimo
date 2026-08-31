@@ -7,6 +7,45 @@
 
 ---
 
+## v2.14.0 — Google Sheets booking sync (admin never seeing bookings — fixed)
+
+**Date:** 2026-08-31
+
+### Problem diagnosed
+- The site is fully static (zero backend). Bookings were saved to the **visitor's
+  own browser** `localStorage` and emailed via EmailJS — so the owner always got the
+  email but the **admin panel stayed empty**: it only reads the browser it runs in
+  (see `admin.html` note: "Open this page on the same device used to receive bookings").
+
+### Added
+- `js/google-apps-script.js` — a Google Apps Script **Web App** that gives every booking
+  a shared, always-visible home:
+  - `doPost` appends a booking to the sheet's `Bookings` tab;
+  - `doGet` returns all bookings as JSON (newest first) for the admin panel.
+- `google-apps-script-setup.md` — step-by-step deployment guide (sheets.new → Apps
+  Script → paste code → Deploy as Web App → paste `/exec` URL into config).
+
+### Changed
+- `js/config.js` — new `SHEETS.endpoint` key (empty by default → sync disabled until
+  you paste the Web App URL from the setup guide).
+- `js/booking.js` — `syncToSheets()` POSTs the enriched booking (id/created/status)
+  to the Web App right after `saveLocal()`. **Best-effort, never blocking**: if the
+  endpoint is empty or the request fails, the booking still saves locally and the
+  email still goes out.
+- `admin.html` — on unlock it fetches the sheet bookings and **merges** them with
+  local ones (deduped by `id`, local wins on status), plus a sync-status note.
+- `electron/admin.html` — same fetch + merge on unlock and on Refresh.
+
+### Notes
+- Not live yet: the code is ready, but deploying requires the one-time Google setup
+  (create the Sheet + Web App) and pasting `SHEETS.endpoint`. Until then emails and
+  local storage behave exactly as before.
+- This is a **write-public** Web App; suitable for collecting bookings but not for
+  storing secrets. A token check can be added in `doPost_` if stricter control is
+  ever needed.
+
+---
+
 ## v2.13.1 — EmailJS recipient mapping fix (current)
 
 **Date:** 2026-08-31
@@ -311,9 +350,13 @@
 
 ## Planned / Unreleased
 
-- **v2.14.0** — Package the Electron admin into installers (launch already smoke-tested v31.7.7).
-- **v2.15.0** — Google Sheets / Excel booking sync.
+- **v2.15.0** — Package the Electron admin into installers (launch already smoke-tested v31.7.7).
 - **v2.16.0** — Production deployment + domain update (sitemap/robots/canonical/JSON-LD).
 - Ongoing — owner-photo replacement program: 36 stock slots remain
   (21 activities · 6 services · 5 day trips · 2 airport cards · Imlil transfer · Sprinter fleet photo),
   plus optional HD re-swaps for `buggy.jpg` and `trekking.jpg`.
+
+### v2.14.0 follow-up (activate Sheets sync)
+- The code is merged; to make it live, follow `google-apps-script-setup.md` and paste
+  the `/exec` URL into `SHEETS.endpoint` in `js/config.js`. (Originally planned as a
+  separate "v2.15.0 Google Sheets sync" — now moved up and implemented as v2.14.0.)

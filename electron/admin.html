@@ -88,6 +88,9 @@
 <script src="../js/config.js"></script>
 <script>
 var state = [];
+var remoteList = [];
+var SHEETS =
+  (window.MAR1_CONFIG && window.MAR1_CONFIG.SHEETS && window.MAR1_CONFIG.SHEETS.endpoint) || "";
 
 function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -152,8 +155,29 @@ function render() {
 }
 
 function refresh() {
-  state = window.bookings ? window.bookings.list() : [];
+  var local = window.bookings ? window.bookings.list() : [];
+  var seen = {};
+  local.forEach(function (b) { if (b && b.id) seen[b.id] = true; });
+  var extra = remoteList.filter(function (b) {
+    if (seen[b.id]) return false;
+    seen[b.id] = true;
+    return true;
+  });
+  state = local.concat(extra);
   render();
+}
+
+function fetchRemote() {
+  if (!SHEETS || SHEETS.indexOf("/exec") === -1) return;
+  fetch(SHEETS)
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res && res.ok && Array.isArray(res.bookings)) {
+        remoteList = res.bookings.filter(function (b) { return b && b.id; });
+      }
+      refresh();
+    })
+    .catch(function () { });
 }
 
 function updateStatus(id, value) {
@@ -182,7 +206,7 @@ function exportJSON() {
   URL.revokeObjectURL(a.href);
 }
 
-document.getElementById("btnRefresh").addEventListener("click", refresh);
+document.getElementById("btnRefresh").addEventListener("click", function () { refresh(); fetchRemote(); });
 document.getElementById("btnExport").addEventListener("click", exportJSON);
 document.getElementById("btnClear").addEventListener("click", function () {
   if (!confirm("Delete ALL booking requests? This cannot be undone.")) return;
@@ -219,7 +243,7 @@ function sha256Hex(str) {
   });
 }
 function gateIsUnlocked() { return sessionStorage.getItem(GATE_SESSION) === "1"; }
-function gateShowApp() { lock.classList.add("hidden"); refresh(); }
+function gateShowApp() { lock.classList.add("hidden"); refresh(); fetchRemote(); }
 function gateShowLock(msg) {
   sessionStorage.removeItem(GATE_SESSION);
   lock.classList.remove("hidden");
