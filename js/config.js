@@ -32,7 +32,7 @@ window.MAR1_CONFIG = {
 
   /* ---------- COMPANY ---------- */
   COMPANY_NAME: "BLACK TRANSSIMO",
-  NEW_BOOKING_EMAIL: "merarwan064@gmail.com",
+  NEW_BOOKING_EMAIL: "meromarwan064@gmail.com",
   WEBSITE_URL: "https://www.mar1travel.com",
 
   /* ---------- ADMIN SECURITY ---------- */

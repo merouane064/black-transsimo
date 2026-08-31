@@ -115,13 +115,13 @@ window.BOOKING = (function () {
       pickup: b.pickup,
       destination: b.destination,
       message: b.message || "\u2014",
-      reply_to: b.email || CFG.NEW_BOOKING_EMAIL || "merarwan064@gmail.com"
+      reply_to: b.email || CFG.NEW_BOOKING_EMAIL || "meromarwan064@gmail.com"
     };
 
     var jobs = [];
 
     var adminParams = Object.assign({}, base, {
-      to_email: CFG.NEW_BOOKING_EMAIL || "merarwan064@gmail.com",
+      to_email: CFG.NEW_BOOKING_EMAIL || "meromarwan064@gmail.com",
       subject: "New Booking Request \u2013 " + (CFG.COMPANY_NAME || "BLACK TRANSSIMO") + " \u2013 " + b.name + " \u2013 " + b.destination
     });
     jobs.push(emailjs.send(sid, tid, adminParams));
